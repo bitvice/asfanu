@@ -303,3 +303,53 @@ export async function deleteMultipleRegistrationsAction(ids: string[]) {
   revalidatePath('/registrations');
   return { success: true, count: ids.length };
 }
+
+export async function addChildAction(registrationId: string, values: {
+  first_name: string;
+  last_name: string;
+  email?: string | null;
+  cnp?: string | null;
+  birth_date?: string | null;
+}) {
+  const profile = await getCurrentUserProfile();
+  if (!profile || !canEditRegistrations(profile.role)) {
+    return { error: 'Nu aveți permisiunea de a adăuga copii.' };
+  }
+
+  const supabase = await createClient();
+
+  let birthDateStr: string | null = null;
+  if (values.birth_date && values.birth_date.trim()) {
+    const clean = values.birth_date.trim();
+    if (/^\d{4}$/.test(clean)) {
+      birthDateStr = `${clean}-01-01`;
+    } else {
+      birthDateStr = clean;
+    }
+  }
+
+  let cnpStr = values.cnp?.trim() || '';
+  if (!cnpStr) {
+    cnpStr = `NO_CNP_${Date.now()}`;
+  }
+
+  const age = birthDateStr ? calculateCurrentAge(birthDateStr) : null;
+
+  const { error: insertError } = await supabase.from('children').insert({
+    registration_id: registrationId,
+    first_name: values.first_name,
+    last_name: values.last_name,
+    email: values.email || null,
+    cnp: cnpStr,
+    age: age,
+    birth_date: birthDateStr,
+  });
+
+  if (insertError) {
+    return { error: `Eroare la adăugarea copilului: ${insertError.message}` };
+  }
+
+  revalidatePath(`/registrations/${registrationId}`);
+  revalidatePath('/registrations');
+  return { success: true };
+}

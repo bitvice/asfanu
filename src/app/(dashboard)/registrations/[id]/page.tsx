@@ -7,6 +7,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { MaskedCNP } from '@/components/registrations/MaskedCNP';
 import { ChildEditDialog } from '@/components/registrations/ChildEditDialog';
+import { ChildAddDialog } from '@/components/registrations/ChildAddDialog';
 import { calculateCurrentAge, parseBirthDate } from '@/lib/children/age';
 import { ArrowLeft, Edit, User, Phone, Mail, MapPin, Baby, ShieldCheck } from 'lucide-react';
 import Link from 'next/link';
@@ -174,10 +175,11 @@ export default function RegistrationDetailPage() {
 
       {/* Children Section */}
       <Card>
-        <CardHeader className="border-b border-slate-100 dark:border-slate-800 pb-3">
+        <CardHeader className="border-b border-slate-100 dark:border-slate-800 pb-3 flex flex-row items-center justify-between">
           <CardTitle className="text-sm font-bold flex items-center gap-2 text-indigo-600 dark:text-indigo-400">
             <Baby className="w-4 h-4" /> Copii Asociați ({data.children.length})
           </CardTitle>
+          <ChildAddDialog registrationId={data.id} parentLastName={data.parent_last_name} onSaved={loadDetail} />
         </CardHeader>
         <CardContent className="pt-4 space-y-3">
           {data.children.length === 0 ? (

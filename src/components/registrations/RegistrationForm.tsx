@@ -140,7 +140,7 @@ export function RegistrationForm({ initialValues, onSubmitAction, isEditMode = f
 
           <div>
             <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-              Număr de Telefon *
+              Număr de Telefon
             </label>
             <Input {...register('phone')} placeholder="0721234567" className="mt-1" />
             {errors.phone && (
@@ -233,7 +233,7 @@ export function RegistrationForm({ initialValues, onSubmitAction, isEditMode = f
                   )}
                 </div>
 
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                   <div>
                     <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
                       Prenume Copil *
@@ -256,7 +256,18 @@ export function RegistrationForm({ initialValues, onSubmitAction, isEditMode = f
 
                   <div>
                     <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-                      CNP Copil (13 cifre) *
+                      Anul sau Data Nașterii
+                    </label>
+                    <Input
+                      {...register(`children.${index}.birth_date`)}
+                      placeholder="ex: 2018 sau 2018-05-15"
+                      className="mt-1 bg-white dark:bg-slate-950 font-mono text-xs"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                      CNP Copil (13 cifre)
                     </label>
                     <Input {...register(`children.${index}.cnp`)} placeholder="5010101410018" className="mt-1 bg-white dark:bg-slate-950 font-mono" />
                     {errors.children?.[index]?.cnp && (

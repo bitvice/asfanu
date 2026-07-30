@@ -7,8 +7,8 @@ export function normalizePhone(rawPhone: string | null | undefined): {
   isValid: boolean;
   error?: string;
 } {
-  if (!rawPhone) {
-    return { normalized: '', isValid: false, error: 'Numărul de telefon este obligatoriu.' };
+  if (!rawPhone || !rawPhone.trim()) {
+    return { normalized: '', isValid: true };
   }
 
   // Remove spaces, dashes, dots, parentheses

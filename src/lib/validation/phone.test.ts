@@ -20,8 +20,13 @@ describe('normalizePhone', () => {
     expect(res.normalized).toBe('+40721234567');
   });
 
-  it('should reject invalid or incomplete phone numbers', () => {
+  it('should accept null, undefined or empty strings as valid optional phone numbers', () => {
+    expect(normalizePhone(null).isValid).toBe(true);
+    expect(normalizePhone('').isValid).toBe(true);
+    expect(normalizePhone('   ').isValid).toBe(true);
+  });
+
+  it('should reject invalid or incomplete non-empty phone numbers', () => {
     expect(normalizePhone('12345').isValid).toBe(false);
-    expect(normalizePhone(null).isValid).toBe(false);
   });
 });
