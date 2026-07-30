@@ -61,63 +61,71 @@ export default function DashboardPage() {
 
       {/* Metric Cards Grid */}
       <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
-        <Card>
+        <Card className="hover:border-indigo-200 dark:hover:border-indigo-800">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-slate-600 dark:text-slate-400">
+            <CardTitle className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
               Total Înregistrări
             </CardTitle>
-            <Users className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+            <div className="w-9 h-9 rounded-xl bg-indigo-50 dark:bg-indigo-950/80 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0 shadow-xs">
+              <Users className="w-4 h-4" />
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-slate-900 dark:text-slate-100">
+            <div className="text-3xl font-extrabold text-slate-900 dark:text-slate-100 tracking-tight">
               {loading ? '...' : metrics?.totalRegistrations ?? 0}
             </div>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Familii înregistrate în sistem</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1.5 font-medium">Familii înregistrate în sistem</p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="hover:border-emerald-200 dark:hover:border-emerald-800">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-slate-600 dark:text-slate-400">
+            <CardTitle className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
               Total Copii
             </CardTitle>
-            <FileCheck className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+            <div className="w-9 h-9 rounded-xl bg-emerald-50 dark:bg-emerald-950/80 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 shadow-xs">
+              <FileCheck className="w-4 h-4" />
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-slate-900 dark:text-slate-100">
+            <div className="text-3xl font-extrabold text-slate-900 dark:text-slate-100 tracking-tight">
               {loading ? '...' : metrics?.totalChildren ?? 0}
             </div>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Copii asociați înregistrărilor</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1.5 font-medium">Copii asociați înregistrărilor</p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="hover:border-blue-200 dark:hover:border-blue-800">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-slate-600 dark:text-slate-400">
+            <CardTitle className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
               Importuri Excel
             </CardTitle>
-            <FileSpreadsheet className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+            <div className="w-9 h-9 rounded-xl bg-blue-50 dark:bg-blue-950/80 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0 shadow-xs">
+              <FileSpreadsheet className="w-4 h-4" />
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-slate-900 dark:text-slate-100">
+            <div className="text-3xl font-extrabold text-slate-900 dark:text-slate-100 tracking-tight">
               {loading ? '...' : metrics?.totalImports ?? 0}
             </div>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Sesiuni de import procesate</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1.5 font-medium">Sesiuni de import procesate</p>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="hover:border-amber-200 dark:hover:border-amber-800">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-slate-600 dark:text-slate-400">
+            <CardTitle className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
               CNP Lipsă / Incomplet
             </CardTitle>
-            <AlertTriangle className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+            <div className="w-9 h-9 rounded-xl bg-amber-50 dark:bg-amber-950/80 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0 shadow-xs">
+              <AlertTriangle className="w-4 h-4" />
+            </div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-amber-600 dark:text-amber-400">
+            <div className="text-3xl font-extrabold text-amber-600 dark:text-amber-400 tracking-tight">
               {loading ? '...' : metrics?.incompleteCNPCount ?? 0}
             </div>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">Înregistrări ce necesită atenție</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-1.5 font-medium">Înregistrări ce necesită atenție</p>
           </CardContent>
         </Card>
       </div>
@@ -180,7 +188,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Quick Action Card */}
-      <Card className="border-dashed border-indigo-200 dark:border-indigo-900 bg-indigo-50/50 dark:bg-indigo-950/30">
+      <Card className="border border-indigo-200/80 dark:border-indigo-900 bg-gradient-to-br from-indigo-50/80 via-purple-50/30 to-white dark:from-indigo-950/40 dark:via-purple-950/20 dark:to-slate-900 shadow-sm">
         <CardHeader>
           <CardTitle className="text-indigo-950 dark:text-indigo-200">Acțiuni Rapide</CardTitle>
           <CardDescription className="dark:text-indigo-300/80">

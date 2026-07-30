@@ -84,27 +84,26 @@ export default function RegistrationDetailPage() {
 
   return (
     <div className="space-y-6 max-w-4xl mx-auto">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
+      {/* Header Actions & Title */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
           <Link href="/registrations">
-            <Button variant="outline" size="sm" className="gap-1 text-xs">
-              <ArrowLeft className="w-4 h-4" /> Înapoi
+            <Button variant="ghost" size="sm" className="gap-1.5 text-xs text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 -ml-2">
+              <ArrowLeft className="w-4 h-4" /> Înapoi la înregistrări
             </Button>
           </Link>
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
-              {data.parent_last_name} {data.parent_first_name}
-            </h1>
-            <p className="text-xs text-slate-500 font-mono">ID: {data.id}</p>
-          </div>
+
+          <Link href={`/registrations/${data.id}/edit`}>
+            <Button variant="outline" size="sm" className="gap-1.5 text-xs font-semibold bg-white dark:bg-slate-900">
+              <Edit className="w-3.5 h-3.5" /> Editează
+            </Button>
+          </Link>
         </div>
 
-        <div className="flex items-center gap-2">
-          <Link href={`/registrations/${data.id}/edit`}>
-            <Button variant="outline" size="sm" className="gap-1.5 text-xs">
-              <Edit className="w-4 h-4" /> Editează
-            </Button>
-          </Link>
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900 dark:text-slate-100">
+            {data.parent_last_name} {data.parent_first_name}
+          </h1>
         </div>
       </div>
 
