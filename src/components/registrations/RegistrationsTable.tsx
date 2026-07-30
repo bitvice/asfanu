@@ -253,8 +253,8 @@ export function RegistrationsTable({
     <div className="space-y-4">
       {/* Bulk Selection Action Bar */}
       {canDelete && selectedIds.length > 0 && (
-        <div className="p-3 rounded-xl bg-red-50/90 dark:bg-red-950/80 border border-red-200 dark:border-red-900 flex items-center justify-between shadow-xs transition-all">
-          <div className="flex items-center gap-2">
+        <div className="p-3 rounded-xl bg-red-50/90 dark:bg-red-950/80 border border-red-200 dark:border-red-900 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs transition-all">
+          <div className="flex items-center gap-2 flex-wrap">
             <Badge variant="destructive" className="font-mono text-xs">
               {selectedIds.length} {selectedIds.length === 1 ? 'înregistrare selectată' : 'înregistrări selectate'}
             </Badge>
@@ -262,7 +262,7 @@ export function RegistrationsTable({
               Puteți șterge toate înregistrările bifate simultan.
             </span>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
             <Button
               variant="outline"
               size="sm"
@@ -340,7 +340,7 @@ export function RegistrationsTable({
       )}
 
       {/* Main Table */}
-      <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm overflow-hidden">
+      <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm overflow-x-auto min-w-full">
         <Table>
           <TableHeader className="bg-slate-50/70 dark:bg-slate-950/50">
             {table.getHeaderGroups().map((headerGroup) => (

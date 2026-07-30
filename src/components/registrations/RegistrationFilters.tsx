@@ -37,41 +37,41 @@ export function RegistrationFilters({ onFilterChange }: RegistrationFiltersProps
   const hasActiveFilters = search || county || city || privacyPolicy !== 'all';
 
   return (
-    <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm space-y-3">
-      <div className="flex flex-wrap gap-3 items-center">
+    <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xs space-y-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 items-center">
         {/* Search Input */}
-        <div className="relative flex-1 min-w-[240px]">
+        <div className="relative sm:col-span-2 lg:col-span-2">
           <Search className="w-4 h-4 absolute left-3 top-2.5 text-slate-400" />
           <Input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Căutare după nume, email, telefon sau CNP..."
-            className="pl-9 bg-slate-50 dark:bg-slate-950 text-xs"
+            className="pl-9 bg-slate-50 dark:bg-slate-950 text-xs w-full"
           />
         </div>
 
         {/* County Filter */}
-        <div className="w-36">
+        <div className="w-full">
           <Input
             value={county}
             onChange={(e) => setCounty(e.target.value)}
             placeholder="Filtru Județ"
-            className="bg-slate-50 dark:bg-slate-950 text-xs"
+            className="bg-slate-50 dark:bg-slate-950 text-xs w-full"
           />
         </div>
 
         {/* City Filter */}
-        <div className="w-36">
+        <div className="w-full">
           <Input
             value={city}
             onChange={(e) => setCity(e.target.value)}
             placeholder="Filtru Oraș"
-            className="bg-slate-50 dark:bg-slate-950 text-xs"
+            className="bg-slate-50 dark:bg-slate-950 text-xs w-full"
           />
         </div>
 
         {/* Privacy Policy Filter */}
-        <div className="w-44">
+        <div className="w-full flex items-center gap-2">
           <select
             value={privacyPolicy}
             onChange={(e) => setPrivacyPolicy(e.target.value)}
@@ -81,14 +81,19 @@ export function RegistrationFilters({ onFilterChange }: RegistrationFiltersProps
             <option value="accepted">Doar Acceptate (DA)</option>
             <option value="declined">Neacceptate (NU)</option>
           </select>
-        </div>
 
-        {hasActiveFilters && (
-          <Button variant="ghost" size="sm" onClick={handleClear} className="gap-1 text-xs text-slate-500 hover:text-slate-900">
-            <X className="w-3.5 h-3.5" />
-            Resetează
-          </Button>
-        )}
+          {hasActiveFilters && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleClear}
+              className="gap-1 text-xs text-slate-500 hover:text-slate-900 shrink-0 px-2"
+              title="Resetează filtrele"
+            >
+              <X className="w-3.5 h-3.5" />
+            </Button>
+          )}
+        </div>
       </div>
     </div>
   );

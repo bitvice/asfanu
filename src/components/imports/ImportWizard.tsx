@@ -355,7 +355,7 @@ export function ImportWizard({ existingRegistrations, onExecuteImportAction }: I
               </div>
             </CardHeader>
             <CardContent className="p-0">
-              <div className="max-h-[400px] overflow-y-auto border-t border-slate-200 dark:border-slate-800">
+              <div className="max-h-[400px] overflow-y-auto overflow-x-auto border-t border-slate-200 dark:border-slate-800 min-w-full">
                 <Table>
                   <TableHeader className="bg-slate-50 dark:bg-slate-950">
                     <TableRow>
