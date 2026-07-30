@@ -33,7 +33,7 @@ export const registrationSchema = z.object({
   family_details: z.string().nullable().optional(),
   notification_email: z.string().email('Email-ul de notificare este invalid.').nullable().optional().or(z.literal('')),
   internal_notes: z.string().nullable().optional(),
-  children: z.array(childSchema).default([]),
+  children: z.array(childSchema),
 });
 
 export type ChildFormValues = z.infer<typeof childSchema>;

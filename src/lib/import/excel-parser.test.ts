@@ -1,5 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import * as XLSX from 'xlsx';
+import * as fs from 'fs';
+import * as path from 'path';
 import { parseExcelFile } from './excel-parser';
 
 describe('parseExcelFile', () => {
@@ -26,5 +28,20 @@ describe('parseExcelFile', () => {
     expect(result.rawRows.length).toBe(1);
     expect(result.rawRows[0]['Nume de familie [1]']).toBe('Popescu');
     expect(result.rawRows[0]['Nume de familie [2]']).toBe('Popescu Jr');
+  });
+
+  it('should successfully parse the actual sample Excel file from docs/', () => {
+    const filePath = path.resolve(__dirname, '../../../docs/Lista familii inscrise Brasov 05,03,2026.xlsx');
+    if (fs.existsSync(filePath)) {
+      const buffer = fs.readFileSync(filePath);
+      const result = parseExcelFile(buffer);
+
+      expect(result.headers.length).toBeGreaterThan(0);
+      expect(result.rawRows.length).toBeGreaterThan(0);
+
+      // Verify presence of duplicate header disambiguation keys
+      const uniqueKeys = result.headers.map(h => h.uniqueKey);
+      expect(uniqueKeys.some(k => k.includes('[1]'))).toBe(true);
+    }
   });
 });
