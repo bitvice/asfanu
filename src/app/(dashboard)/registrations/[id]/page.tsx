@@ -6,6 +6,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { MaskedCNP } from '@/components/registrations/MaskedCNP';
+import { ChildEditDialog } from '@/components/registrations/ChildEditDialog';
+import { calculateCurrentAge, parseBirthDate } from '@/lib/children/age';
 import { ArrowLeft, Edit, User, Phone, Mail, MapPin, Baby, ShieldCheck } from 'lucide-react';
 import Link from 'next/link';
 
@@ -43,21 +45,23 @@ export default function RegistrationDetailPage() {
     }
   }, []);
 
-  React.useEffect(() => {
+  const loadDetail = React.useCallback(async () => {
     if (!id) return;
-    async function loadDetail() {
-      setLoading(true);
-      try {
-        const res = await fetchRegistrationByIdAction(id!, false);
-        setData(res as unknown as RegistrationDetail);
-      } catch {
-        setError('Nu s-a putut încărca înregistrarea solicitată.');
-      } finally {
-        setLoading(false);
-      }
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetchRegistrationByIdAction(id, false);
+      setData(res as unknown as RegistrationDetail);
+    } catch {
+      setError('Nu s-a putut încărca înregistrarea solicitată.');
+    } finally {
+      setLoading(false);
     }
-    loadDetail();
   }, [id]);
+
+  React.useEffect(() => {
+    loadDetail();
+  }, [loadDetail]);
 
   if (loading) {
     return (
@@ -180,25 +184,45 @@ export default function RegistrationDetailPage() {
           {data.children.length === 0 ? (
             <p className="text-xs text-slate-500 text-center py-4">Nu există copii înregistrați.</p>
           ) : (
-            data.children.map((child) => (
-              <div
-                key={child.id}
-                className="p-3 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 flex flex-wrap items-center justify-between gap-3 text-xs"
-              >
-                <div>
-                  <span className="font-bold text-slate-900 dark:text-slate-100">{child.last_name} {child.first_name}</span>
-                  {child.email && <span className="text-slate-500 block text-[11px]">{child.email}</span>}
+            data.children.map((child) => {
+              const birthDate = parseBirthDate(child.birth_date);
+              const birthYear = birthDate?.getUTCFullYear();
+              const currentAge = calculateCurrentAge(child.birth_date);
+
+              return (
+                <div
+                  key={child.id}
+                  className="p-4 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 space-y-3 text-xs"
+                >
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                      <span className="font-bold text-slate-900 dark:text-slate-100">{child.last_name} {child.first_name}</span>
+                      {child.email && <span className="text-slate-500 block text-[11px]">{child.email}</span>}
+                    </div>
+                    <ChildEditDialog registrationId={data.id} child={child} onSaved={loadDetail} />
+                  </div>
+
+                  <div className="grid gap-3 border-t border-slate-200 pt-3 dark:border-slate-800 sm:grid-cols-3">
+                    <div>
+                      <span className="block text-[10px] uppercase tracking-wide text-slate-400">Anul nașterii</span>
+                      <span className="font-semibold">{birthYear ?? 'Nespecificat'}</span>
+                    </div>
+                    <div>
+                      <span className="block text-[10px] uppercase tracking-wide text-slate-400">Vârsta curentă</span>
+                      <span className="font-semibold">{currentAge !== null ? `${currentAge} ani` : 'Nespecificată'}</span>
+                    </div>
+                    <div className="flex items-center gap-3 sm:justify-end">
+                      <span className="text-slate-500">CNP:</span>
+                      <MaskedCNP
+                        cnp={child.cnp}
+                        canUnmask={true}
+                        onUnmaskRequest={() => getUnmaskedChildCNPAction(child.id)}
+                      />
+                    </div>
+                  </div>
                 </div>
-                <div className="flex items-center gap-3">
-                  <span className="text-slate-500">CNP:</span>
-                  <MaskedCNP
-                    cnp={child.cnp}
-                    canUnmask={true}
-                    onUnmaskRequest={() => getUnmaskedChildCNPAction(child.id)}
-                  />
-                </div>
-              </div>
-            ))
+              );
+            })
           )}
         </CardContent>
       </Card>

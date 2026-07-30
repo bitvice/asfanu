@@ -10,9 +10,9 @@ import {
 import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Eye, Edit, Trash2, ChevronLeft, ChevronRight, CheckCircle2, XCircle, Users } from 'lucide-react';
+import { Eye, Edit, Trash2, ChevronLeft, ChevronRight, CheckCircle2, XCircle, Users, Loader2 } from 'lucide-react';
 import Link from 'next/link';
-import { MaskedCNP } from './MaskedCNP';
+import { createPortal } from 'react-dom';
 
 export interface RegistrationRowData {
   id: string;
@@ -36,10 +36,14 @@ interface RegistrationsTableProps {
   onPageChange: (newPage: number) => void;
   canEdit?: boolean;
   canDelete?: boolean;
-  canUnmaskCNP?: boolean;
   onDeleteRequest?: (id: string) => Promise<void>;
-  onUnmaskChildCNP?: (childId: string) => Promise<string | null>;
+  onBulkDeleteRequest?: (ids: string[]) => Promise<void>;
+  onPageSizeChange?: (newSize: number) => void;
 }
+
+type DeleteTarget =
+  | { type: 'single'; id: string; name: string }
+  | { type: 'bulk'; ids: string[] };
 
 const columnHelper = createColumnHelper<RegistrationRowData>();
 
@@ -52,12 +56,93 @@ export function RegistrationsTable({
   onPageChange,
   canEdit = false,
   canDelete = false,
-  canUnmaskCNP = false,
   onDeleteRequest,
-  onUnmaskChildCNP,
+  onBulkDeleteRequest,
+  onPageSizeChange,
 }: RegistrationsTableProps) {
+  const [selectedIds, setSelectedIds] = React.useState<string[]>([]);
+  const [deleteTarget, setDeleteTarget] = React.useState<DeleteTarget | null>(null);
+  const [isDeleting, setIsDeleting] = React.useState(false);
+  const [mounted, setMounted] = React.useState(false);
+
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // Clear selection when data page changes
+  React.useEffect(() => {
+    setSelectedIds([]);
+  }, [page, data]);
+
+  const allPageIds = React.useMemo(() => data.map((d) => d.id), [data]);
+  const isAllPageSelected = allPageIds.length > 0 && allPageIds.every((id) => selectedIds.includes(id));
+
+  const toggleSelectAllPage = React.useCallback(() => {
+    if (isAllPageSelected) {
+      setSelectedIds((prev) => prev.filter((id) => !allPageIds.includes(id)));
+    } else {
+      setSelectedIds((prev) => Array.from(new Set([...prev, ...allPageIds])));
+    }
+  }, [isAllPageSelected, allPageIds]);
+
+  const toggleSelectRow = React.useCallback((id: string) => {
+    setSelectedIds((prev) =>
+      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
+    );
+  }, []);
+
+  async function handleExecuteDelete() {
+    if (!deleteTarget) return;
+    setIsDeleting(true);
+    try {
+      if (deleteTarget.type === 'single') {
+        if (onDeleteRequest) {
+          await onDeleteRequest(deleteTarget.id);
+        }
+      } else {
+        if (onBulkDeleteRequest) {
+          await onBulkDeleteRequest(deleteTarget.ids);
+          setSelectedIds([]);
+        }
+      }
+      setDeleteTarget(null);
+    } catch {
+      alert('A apărut o eroare la ștergerea înregistrărilor.');
+    } finally {
+      setIsDeleting(false);
+    }
+  }
+
   const columns = React.useMemo(
     () => [
+      ...(canDelete
+        ? [
+            columnHelper.display({
+              id: 'select',
+              header: () => (
+                <input
+                  type="checkbox"
+                  checked={isAllPageSelected}
+                  onChange={toggleSelectAllPage}
+                  className="rounded border-slate-300 dark:border-slate-700 text-indigo-600 focus:ring-indigo-500 h-4 w-4 cursor-pointer"
+                  title="Selectează toate înregistrările din pagină"
+                />
+              ),
+              cell: (info) => {
+                const rowId = info.row.original.id;
+                const isSelected = selectedIds.includes(rowId);
+                return (
+                  <input
+                    type="checkbox"
+                    checked={isSelected}
+                    onChange={() => toggleSelectRow(rowId)}
+                    className="rounded border-slate-300 dark:border-slate-700 text-indigo-600 focus:ring-indigo-500 h-4 w-4 cursor-pointer"
+                  />
+                );
+              },
+            }),
+          ]
+        : []),
       columnHelper.accessor('registered_at', {
         header: 'Data Înregistrării',
         cell: (info) => {
@@ -86,23 +171,14 @@ export function RegistrationsTable({
         cell: (info) => <Badge variant="secondary" className="text-[11px] font-medium">{info.getValue()}</Badge>,
       }),
       columnHelper.accessor('children', {
-        header: 'Copii & CNP Maskat',
+        header: 'Număr copii',
         cell: (info) => {
           const children = info.getValue() || [];
-          if (children.length === 0) return <span className="text-xs text-slate-400">Fără copii</span>;
+          const count = children.length;
           return (
-            <div className="flex flex-col gap-1">
-              {children.map((c) => (
-                <div key={c.id} className="flex items-center gap-1.5 text-xs">
-                  <span className="font-medium text-slate-700 dark:text-slate-300">{c.last_name} {c.first_name}:</span>
-                  <MaskedCNP
-                    cnp={c.cnp}
-                    canUnmask={canUnmaskCNP}
-                    onUnmaskRequest={onUnmaskChildCNP ? () => onUnmaskChildCNP(c.id) : undefined}
-                  />
-                </div>
-              ))}
-            </div>
+            <Badge variant={count > 0 ? 'secondary' : 'outline'} className="text-xs font-semibold px-2.5 py-0.5 font-mono">
+              {count} {count === 1 ? 'copil' : 'copii'}
+            </Badge>
           );
         },
       }),
@@ -144,11 +220,13 @@ export function RegistrationsTable({
                 <Button
                   variant="ghost"
                   size="icon"
-                  onClick={() => {
-                    if (confirm('Sunteți sigur că doriți să ștergeți această înregistrare?')) {
-                      onDeleteRequest(row.id);
-                    }
-                  }}
+                  onClick={() =>
+                    setDeleteTarget({
+                      type: 'single',
+                      id: row.id,
+                      name: `${row.parent_last_name} ${row.parent_first_name}`,
+                    })
+                  }
                   className="h-7 w-7 text-slate-400 hover:text-red-600"
                   title="Șterge"
                 >
@@ -160,7 +238,7 @@ export function RegistrationsTable({
         },
       }),
     ],
-    [canEdit, canDelete, canUnmaskCNP, onDeleteRequest, onUnmaskChildCNP]
+    [canEdit, canDelete, onDeleteRequest, isAllPageSelected, selectedIds, toggleSelectAllPage, toggleSelectRow]
   );
 
   const table = useReactTable({
@@ -173,6 +251,95 @@ export function RegistrationsTable({
 
   return (
     <div className="space-y-4">
+      {/* Bulk Selection Action Bar */}
+      {canDelete && selectedIds.length > 0 && (
+        <div className="p-3 rounded-xl bg-red-50/90 dark:bg-red-950/80 border border-red-200 dark:border-red-900 flex items-center justify-between shadow-xs transition-all">
+          <div className="flex items-center gap-2">
+            <Badge variant="destructive" className="font-mono text-xs">
+              {selectedIds.length} {selectedIds.length === 1 ? 'înregistrare selectată' : 'înregistrări selectate'}
+            </Badge>
+            <span className="text-xs text-red-700 dark:text-red-300 font-medium">
+              Puteți șterge toate înregistrările bifate simultan.
+            </span>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setSelectedIds([])}
+              className="h-8 text-xs bg-white dark:bg-slate-900"
+            >
+              Deselectează Tot
+            </Button>
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={() => setDeleteTarget({ type: 'bulk', ids: selectedIds })}
+              className="h-8 text-xs font-semibold gap-1.5 bg-red-600 hover:bg-red-700"
+            >
+              <Trash2 className="w-3.5 h-3.5" /> Șterge Selectate ({selectedIds.length})
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Unified Custom Delete Confirmation Modal (Viewport Centered via Portal) */}
+      {deleteTarget && mounted && createPortal(
+        <div className="fixed inset-0 z-[100] bg-slate-900/65 backdrop-blur-xs flex items-center justify-center p-4 min-h-screen w-screen top-0 left-0">
+          <div className="p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl max-w-md w-full space-y-4 text-center animate-in fade-in zoom-in-95 duration-150">
+            <div className="w-12 h-12 rounded-full bg-red-100 dark:bg-red-950 text-red-600 dark:text-red-400 mx-auto flex items-center justify-center">
+              <Trash2 className="w-6 h-6" />
+            </div>
+            <div>
+              <h3 className="font-bold text-lg text-slate-900 dark:text-slate-100">
+                {deleteTarget.type === 'single' ? 'Ștergere Înregistrare' : 'Ștergere Multiplă Înregistrări'}
+              </h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-2 leading-relaxed">
+                {deleteTarget.type === 'single' ? (
+                  <>Sunteți sigur că doriți să ștergeți înregistrarea pentru <strong>{deleteTarget.name}</strong>?</>
+                ) : (
+                  <>Sunteți sigur că doriți să ștergeți definitiv cele <strong>{deleteTarget.ids.length}</strong> înregistrări selectate?</>
+                )}
+                <br />
+                <span className="text-red-500 font-medium">Această acțiune este ireversibilă și va fi înregistrată în jurnalul de audit.</span>
+              </p>
+            </div>
+
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={isDeleting}
+                onClick={() => setDeleteTarget(null)}
+                className="text-xs"
+              >
+                Anulează
+              </Button>
+              <Button
+                variant="destructive"
+                size="sm"
+                disabled={isDeleting}
+                onClick={handleExecuteDelete}
+                className="text-xs gap-1.5 bg-red-600 hover:bg-red-700 font-semibold"
+              >
+                {isDeleting ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" /> Se șterge...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="w-3.5 h-3.5" />
+                    {deleteTarget.type === 'single' ? 'Confirmă Ștergerea' : `Confirmă Ștergerea (${deleteTarget.ids.length})`}
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Main Table */}
       <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm overflow-hidden">
         <Table>
           <TableHeader className="bg-slate-50/70 dark:bg-slate-950/50">
@@ -197,24 +364,51 @@ export function RegistrationsTable({
                 </TableCell>
               </TableRow>
             ) : (
-              table.getRowModel().rows.map((row) => (
-                <TableRow key={row.id} className="hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-colors">
-                  {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id} className="py-3">
-                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                    </TableCell>
-                  ))}
-                </TableRow>
-              ))
+              table.getRowModel().rows.map((row) => {
+                const isSelected = selectedIds.includes(row.original.id);
+                return (
+                  <TableRow
+                    key={row.id}
+                    className={`transition-colors ${
+                      isSelected
+                        ? 'bg-red-50/30 dark:bg-red-950/20 hover:bg-red-50/50'
+                        : 'hover:bg-slate-50/50 dark:hover:bg-slate-800/50'
+                    }`}
+                  >
+                    {row.getVisibleCells().map((cell) => (
+                      <TableCell key={cell.id} className="py-3">
+                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                );
+              })
             )}
           </TableBody>
         </Table>
       </div>
 
       {/* Pagination Footer */}
-      <div className="flex items-center justify-between px-2 text-xs text-slate-500">
-        <div>
-          Se afișează <strong>{(page - 1) * pageSize + (data.length ? 1 : 0)}</strong> - <strong>{(page - 1) * pageSize + data.length}</strong> din <strong>{totalCount}</strong> înregistrări
+      <div className="flex items-center justify-between px-2 text-xs text-slate-500 flex-wrap gap-3">
+        <div className="flex items-center gap-4">
+          {onPageSizeChange && (
+            <div className="flex items-center gap-1.5">
+              <span>Pe pagină:</span>
+              <select
+                value={pageSize}
+                onChange={(e) => onPageSizeChange(Number(e.target.value))}
+                className="h-8 rounded border border-slate-200 dark:border-slate-700 text-xs px-2 bg-white dark:bg-slate-900 font-semibold text-slate-800 dark:text-slate-200"
+              >
+                <option value={10}>10</option>
+                <option value={25}>25</option>
+                <option value={50}>50</option>
+                <option value={100}>100</option>
+              </select>
+            </div>
+          )}
+          <div>
+            Se afișează <strong>{(page - 1) * pageSize + (data.length ? 1 : 0)}</strong> - <strong>{(page - 1) * pageSize + data.length}</strong> din <strong>{totalCount}</strong> înregistrări
+          </div>
         </div>
         <div className="flex items-center gap-2">
           <Button

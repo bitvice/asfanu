@@ -47,11 +47,16 @@ export function parseExcelFile(buffer: Buffer): ParsedExcelResult {
     };
   });
 
+  const isBlankCell = (value: unknown) =>
+    value === null ||
+    value === undefined ||
+    (typeof value === 'string' && value.trim() === '');
+
   const rawRows: Array<Record<string, unknown>> = [];
 
   for (let rowIndex = 1; rowIndex < matrix.length; rowIndex++) {
     const rowValues = matrix[rowIndex];
-    if (!rowValues || rowValues.every(val => val === '' || val === null || val === undefined)) {
+    if (!rowValues || rowValues.every(isBlankCell)) {
       continue; // Skip empty rows
     }
 

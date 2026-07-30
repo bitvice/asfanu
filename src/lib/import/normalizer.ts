@@ -11,7 +11,9 @@ export function normalizeEmail(val: unknown): string {
 export function normalizeBoolean(val: unknown): boolean {
   if (typeof val === 'boolean') return val;
   const str = normalizeString(val).toLowerCase();
-  return ['da', 'true', '1', 'yes', 'x', 'bifat'].includes(str);
+  if (!str) return true; // Default to true for registered rows
+  if (['nu', 'false', '0', 'no'].includes(str)) return false;
+  return true;
 }
 
 export function parseRomanianDate(val: unknown): string | null {

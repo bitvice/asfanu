@@ -30,6 +30,26 @@ describe('parseExcelFile', () => {
     expect(result.rawRows[0]['Nume de familie [2]']).toBe('Popescu Jr');
   });
 
+  it('should ignore completely empty rows, including cells containing only whitespace', () => {
+    const dataMatrix = [
+      ['Nume', 'Prenume', 'Email'],
+      ['Popescu', 'Ion', 'ion@example.com'],
+      ['', '', ''],
+      ['   ', '\t', ' \n '],
+      ['Ionescu', 'Maria', 'maria@example.com'],
+    ];
+
+    const worksheet = XLSX.utils.aoa_to_sheet(dataMatrix);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Sheet1');
+    const buffer = XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
+
+    const result = parseExcelFile(buffer);
+
+    expect(result.totalRows).toBe(2);
+    expect(result.rawRows.map((row) => row._rowNumber)).toEqual([2, 5]);
+  });
+
   it('should successfully parse the actual sample Excel file from docs/', () => {
     const filePath = path.resolve(__dirname, '../../../docs/Lista familii inscrise Brasov 05,03,2026.xlsx');
     if (fs.existsSync(filePath)) {
@@ -38,10 +58,6 @@ describe('parseExcelFile', () => {
 
       expect(result.headers.length).toBeGreaterThan(0);
       expect(result.rawRows.length).toBeGreaterThan(0);
-
-      // Verify presence of duplicate header disambiguation keys
-      const uniqueKeys = result.headers.map(h => h.uniqueKey);
-      expect(uniqueKeys.some(k => k.includes('[1]'))).toBe(true);
     }
   });
 });

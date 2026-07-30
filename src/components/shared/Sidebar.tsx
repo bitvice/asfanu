@@ -9,7 +9,6 @@ import {
   FileSpreadsheet,
   UserCog,
   Settings,
-  ShieldAlert,
 } from 'lucide-react';
 
 const navigation = [
@@ -25,14 +24,14 @@ export function Sidebar() {
 
   return (
     <aside className="w-64 border-r border-slate-200 bg-slate-900 text-slate-100 min-h-screen flex flex-col">
-      <div className="p-6 border-b border-slate-800 flex items-center gap-3">
-        <div className="bg-indigo-600 text-white p-2 rounded-lg font-bold">
-          <ShieldAlert className="w-5 h-5" />
-        </div>
-        <div>
-          <h1 className="font-bold text-lg leading-tight">ASFANU CRM</h1>
-          <p className="text-xs text-slate-400">Sistem Înregistrări</p>
-        </div>
+      <div className="p-4 border-b border-slate-800 flex items-center justify-center bg-slate-950/40">
+        <Link href="/dashboard" className="block py-1">
+          <img
+            src="/logo.png"
+            alt="ASFANU Logo"
+            className="h-16 w-auto object-contain"
+          />
+        </Link>
       </div>
       <nav className="flex-1 p-4 space-y-1">
         {navigation.map((item) => {

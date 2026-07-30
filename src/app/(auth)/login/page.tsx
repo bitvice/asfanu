@@ -6,7 +6,7 @@ import { loginWithEmail } from '@/services/auth.service';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from '@/components/ui/card';
-import { ShieldAlert, LogIn, AlertCircle } from 'lucide-react';
+import { LogIn, AlertCircle } from 'lucide-react';
 import { ThemeToggle } from '@/components/shared/ThemeToggle';
 
 function SubmitButton() {
@@ -42,20 +42,19 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-slate-50 dark:bg-slate-950 p-4 transition-colors">
+    <div className="min-h-screen flex flex-col items-center justify-center dashboard-bg p-4 transition-colors relative">
       <div className="absolute top-4 right-4">
         <ThemeToggle />
       </div>
 
       <div className="w-full max-w-md space-y-6">
-        <div className="text-center space-y-2">
-          <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-indigo-600 text-white font-bold shadow-lg shadow-indigo-600/20 mb-2">
-            <ShieldAlert className="w-6 h-6" />
-          </div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100 tracking-tight">
-            ASFANU CRM
-          </h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400">
+        <div className="text-center space-y-2 flex flex-col items-center">
+          <img
+            src="/logo.png"
+            alt="ASFANU Logo"
+            className="h-24 w-auto object-contain mb-2 drop-shadow-md"
+          />
+          <p className="text-xs text-slate-500 dark:text-slate-400">
             Sistem securizat de gestiune internă a înregistrărilor
           </p>
         </div>

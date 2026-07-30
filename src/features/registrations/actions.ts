@@ -9,6 +9,8 @@ import {
 } from '@/services/registration.service';
 import { canEditRegistrations, canDeleteRegistrations } from '@/lib/security/permissions';
 import { registrationSchema, RegistrationFormValues } from '@/lib/validation/registration.schema';
+import { childDetailsSchema, ChildDetailsValues } from '@/lib/validation/child-details.schema';
+import { calculateCurrentAge } from '@/lib/children/age';
 import { logAuditEvent } from '@/lib/security/audit';
 import { canAccessUnmaskedCNP } from '@/lib/security/cnp-masker';
 import { revalidatePath } from 'next/cache';
@@ -191,6 +193,64 @@ export async function updateRegistrationAction(id: string, rawValues: Registrati
   return { success: true };
 }
 
+export async function updateChildAction(
+  registrationId: string,
+  childId: string,
+  rawValues: ChildDetailsValues
+) {
+  const profile = await getCurrentUserProfile();
+  if (!profile || !canEditRegistrations(profile.role)) {
+    return { error: 'Nu aveți permisiunea de a modifica datele copilului.' };
+  }
+
+  const parsed = childDetailsSchema.safeParse(rawValues);
+  if (!parsed.success) {
+    const firstError = parsed.error.issues[0]?.message;
+    return { error: firstError || 'Datele copilului sunt invalide.' };
+  }
+
+  const values = parsed.data;
+  const age = calculateCurrentAge(values.birth_date);
+  const supabase = await createClient();
+  const updateValues = {
+    first_name: values.first_name,
+    last_name: values.last_name,
+    email: values.email || null,
+    birth_date: values.birth_date || null,
+    age,
+    updated_at: new Date().toISOString(),
+    ...(values.cnp ? { cnp: values.cnp } : {}),
+  };
+
+  const { data: updatedChild, error } = await supabase
+    .from('children')
+    .update(updateValues)
+    .eq('id', childId)
+    .eq('registration_id', registrationId)
+    .select('id')
+    .maybeSingle();
+
+  if (error) {
+    return { error: `Eroare la actualizarea copilului: ${error.message}` };
+  }
+
+  if (!updatedChild) {
+    return { error: 'Copilul nu a fost găsit în familia selectată.' };
+  }
+
+  await logAuditEvent({
+    userId: profile.id,
+    action: 'UPDATE_CHILD',
+    entityType: 'child',
+    entityId: childId,
+    metadata: { registration_id: registrationId },
+  });
+
+  revalidatePath(`/registrations/${registrationId}`);
+  revalidatePath('/registrations');
+  return { success: true };
+}
+
 export async function deleteRegistrationAction(id: string) {
   const profile = await getCurrentUserProfile();
   if (!profile || !canDeleteRegistrations(profile.role)) {
@@ -213,4 +273,33 @@ export async function deleteRegistrationAction(id: string) {
 
   revalidatePath('/registrations');
   return { success: true };
+}
+
+export async function deleteMultipleRegistrationsAction(ids: string[]) {
+  const profile = await getCurrentUserProfile();
+  if (!profile || !canDeleteRegistrations(profile.role)) {
+    return { error: 'Doar administratorii pot șterge înregistrări.' };
+  }
+
+  if (!ids || ids.length === 0) {
+    return { error: 'Nu a fost selectată nicio înregistrare pentru ștergere.' };
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase.from('registrations').delete().in('id', ids);
+
+  if (error) {
+    return { error: `Eroare la ștergerea înregistrărilor: ${error.message}` };
+  }
+
+  await logAuditEvent({
+    userId: profile.id,
+    action: 'DELETE_MULTIPLE_REGISTRATIONS',
+    entityType: 'registration',
+    entityId: ids.join(','),
+    metadata: { deleted_count: ids.length, deleted_ids: ids },
+  });
+
+  revalidatePath('/registrations');
+  return { success: true, count: ids.length };
 }

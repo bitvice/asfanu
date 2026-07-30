@@ -93,14 +93,29 @@ export async function executeBatchImportAction(
         continue;
       }
 
-      // Insert Child if child data present
-      if (norm.child_first_name && norm.child_cnp) {
+      // Insert all extracted child records
+      const childrenToInsert = norm.extractedChildren && norm.extractedChildren.length > 0
+        ? norm.extractedChildren
+        : norm.child_first_name || norm.child_cnp
+        ? [{
+            first_name: norm.child_first_name || 'Copil 1',
+            last_name: norm.child_last_name || norm.parent_last_name,
+            email: norm.child_email || null,
+            cnp: norm.child_cnp || '',
+            age: undefined,
+            birth_date: undefined,
+          }]
+        : [];
+
+      for (const child of childrenToInsert) {
         await supabase.from('children').insert({
           registration_id: reg.id,
-          first_name: norm.child_first_name,
-          last_name: norm.child_last_name || norm.parent_last_name,
-          email: norm.child_email || null,
-          cnp: norm.child_cnp,
+          first_name: child.first_name || 'Copil',
+          last_name: child.last_name || norm.parent_last_name,
+          email: child.email || null,
+          cnp: child.cnp || '',
+          age: child.age || null,
+          birth_date: child.birth_date || null,
         });
       }
 

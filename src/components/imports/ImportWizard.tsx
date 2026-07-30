@@ -12,8 +12,10 @@ import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent, CardFooter } from '@/components/ui/card';
 import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { UploadCloud, FileSpreadsheet, ArrowRight, CheckCircle2, AlertTriangle, XCircle, Play, ArrowLeft } from 'lucide-react';
+import { UploadCloud, FileSpreadsheet, ArrowRight, CheckCircle2, AlertTriangle, XCircle, Play, ArrowLeft, Loader2 } from 'lucide-react';
+import { extractChildrenFromText } from '@/lib/import/children-parser';
 import { useRouter } from 'next/navigation';
+import { createPortal } from 'react-dom';
 
 export interface ProcessedRow {
   rowNumber: number;
@@ -37,6 +39,14 @@ export interface ProcessedRow {
     child_last_name?: string;
     child_email?: string;
     child_cnp?: string;
+    extractedChildren?: Array<{
+      first_name: string;
+      last_name: string;
+      cnp?: string;
+      age?: number;
+      birth_date?: string;
+      email?: string;
+    }>;
   };
   validationErrors: string[];
   duplicateConfidence: DuplicateConfidence;
@@ -71,9 +81,15 @@ export function ImportWizard({ existingRegistrations, onExecuteImportAction }: I
   const [rawRows, setRawRows] = React.useState<Array<Record<string, unknown>>>([]);
   const [mapping, setMapping] = React.useState<Record<string, string>>({});
   const [processedRows, setProcessedRows] = React.useState<ProcessedRow[]>([]);
+  const [parsing, setParsing] = React.useState(false);
   const [submitting, setSubmitting] = React.useState(false);
   const [errorMsg, setErrorMsg] = React.useState<string | null>(null);
   const [importSummary, setImportSummary] = React.useState<{ successful: number; failed: number; duplicates: number } | null>(null);
+  const [mounted, setMounted] = React.useState(false);
+
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Step 1: File Upload Handler
   async function handleFileUpload(selectedFile: File) {
@@ -88,6 +104,7 @@ export function ImportWizard({ existingRegistrations, onExecuteImportAction }: I
     }
 
     setFile(selectedFile);
+    setParsing(true);
     try {
       const arrayBuffer = await selectedFile.arrayBuffer();
       const parsed = parseExcelFile(Buffer.from(arrayBuffer));
@@ -99,6 +116,8 @@ export function ImportWizard({ existingRegistrations, onExecuteImportAction }: I
       setStep(2); // Go to Header Mapping step
     } catch (err: unknown) {
       setErrorMsg((err as Error).message || 'Eroare la citirea fișierului Excel.');
+    } finally {
+      setParsing(false);
     }
   }
 
@@ -134,11 +153,18 @@ export function ImportWizard({ existingRegistrations, onExecuteImportAction }: I
       const childEmail = normalizeEmail(getVal('child_email'));
       const childCnp = normalizeString(getVal('child_cnp'));
 
+      const familyText = [familyDetails, internalNotes, comments].filter(Boolean).join(' | ');
+      const extractedChildren = extractChildrenFromText(familyText, parentLastName, {
+        first_name: childFirstName,
+        cnp: childCnp,
+        email: childEmail,
+      });
+
       const errors: string[] = [];
       if (!parentFirstName) errors.push('Prenumele părintelui este obligatoriu.');
       if (!parentLastName) errors.push('Numele de familie al părintelui este obligatoriu.');
       if (!primaryEmail || !primaryEmail.includes('@')) errors.push('Email-ul principal este invalid.');
-      if (!phoneRes.isValid) errors.push(phoneRes.error || 'Număr de telefon invalid.');
+      if (rawPhone && !phoneRes.isValid) errors.push(phoneRes.error || 'Număr de telefon invalid.');
       if (!county) errors.push('Județul este obligatoriu.');
       if (!city) errors.push('Orașul este obligatoriu.');
 
@@ -185,6 +211,7 @@ export function ImportWizard({ existingRegistrations, onExecuteImportAction }: I
           child_last_name: childLastName || undefined,
           child_email: childEmail || undefined,
           child_cnp: childCnp || undefined,
+          extractedChildren,
         },
         validationErrors: errors,
         duplicateConfidence: dupCheck.confidence,
@@ -222,7 +249,27 @@ export function ImportWizard({ existingRegistrations, onExecuteImportAction }: I
   }
 
   return (
-    <div className="space-y-6 max-w-5xl mx-auto">
+    <div className="space-y-6 max-w-5xl mx-auto relative">
+      {/* Fullscreen Spinner Overlay during Excel parsing or DB batch import */}
+      {(parsing || submitting) && mounted && createPortal(
+        <div className="fixed inset-0 z-[100] bg-slate-900/60 backdrop-blur-xs flex flex-col items-center justify-center p-4 min-h-screen w-screen top-0 left-0">
+          <div className="p-6 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl flex flex-col items-center gap-4 max-w-sm text-center">
+            <div className="w-12 h-12 rounded-full bg-indigo-100 dark:bg-indigo-950 flex items-center justify-center text-indigo-600 dark:text-indigo-400">
+              <Loader2 className="w-8 h-8 animate-spin" />
+            </div>
+            <div>
+              <h3 className="font-bold text-base text-slate-900 dark:text-slate-100">
+                {parsing ? 'Se analizează fișierul Excel...' : 'Se importă datele în baza de date...'}
+              </h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                Vă rugăm să nu închideți această fereastră. Operarea este în desfășurare.
+              </p>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
       {/* Wizard Progress Header */}
       <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-4">
         <div className="flex items-center gap-3">
@@ -316,6 +363,7 @@ export function ImportWizard({ existingRegistrations, onExecuteImportAction }: I
                       <TableHead className="text-xs">Părinte</TableHead>
                       <TableHead className="text-xs">Email / Telefon</TableHead>
                       <TableHead className="text-xs">Copil & CNP</TableHead>
+                      <TableHead className="text-xs text-center">Nr. copii</TableHead>
                       <TableHead className="text-xs">Stare / Erori</TableHead>
                       <TableHead className="text-xs">Acțiune</TableHead>
                     </TableRow>
@@ -340,6 +388,9 @@ export function ImportWizard({ existingRegistrations, onExecuteImportAction }: I
                           ) : (
                             <span className="text-slate-400">-</span>
                           )}
+                        </TableCell>
+                        <TableCell className="text-xs text-center font-mono font-semibold">
+                          {row.normalized.extractedChildren?.length ?? 0}
                         </TableCell>
                         <TableCell className="text-xs">
                           {row.validationErrors.length > 0 ? (
@@ -387,7 +438,16 @@ export function ImportWizard({ existingRegistrations, onExecuteImportAction }: I
               onClick={handleConfirmImport}
               className="bg-emerald-600 hover:bg-emerald-700 text-white gap-2 text-xs font-semibold"
             >
-              <Play className="w-4 h-4" /> Execută Importul ({processedRows.filter(r => r.action === 'import').length} Rânduri)
+              {submitting ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Se execută importul...
+                </>
+              ) : (
+                <>
+                  <Play className="w-4 h-4" /> Execută Importul ({processedRows.filter(r => r.action === 'import').length} Rânduri)
+                </>
+              )}
             </Button>
           </div>
         </div>

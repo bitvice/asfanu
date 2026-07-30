@@ -70,7 +70,24 @@
   * {
     @apply border-slate-200 dark:border-slate-800;
   }
+
   body {
     @apply bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-50;
   }
+}
+
+.dashboard-bg {
+  background-image: url('/bg-light.png');
+  background-size: cover;
+  background-position: 100px;
+  background-attachment: fixed;
+  background-repeat: no-repeat;
+}
+
+.dark .dashboard-bg {
+  background-image: url('/bg-dark.png');
+  background-size: cover;
+  background-position: 100px;
+  background-attachment: fixed;
+  background-repeat: no-repeat;
 }

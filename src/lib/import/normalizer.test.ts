@@ -17,7 +17,9 @@ describe('normalizer helpers', () => {
     expect(normalizeBoolean('DA')).toBe(true);
     expect(normalizeBoolean('da')).toBe(true);
     expect(normalizeBoolean('1')).toBe(true);
+    expect(normalizeBoolean('')).toBe(true);
     expect(normalizeBoolean('Nu')).toBe(false);
+    expect(normalizeBoolean('nu')).toBe(false);
   });
 
   it('should parse Romanian date formats DD.MM.YYYY', () => {

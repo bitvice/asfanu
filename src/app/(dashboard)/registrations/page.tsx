@@ -6,7 +6,7 @@ import { RegistrationsTable, RegistrationRowData } from '@/components/registrati
 import {
   fetchRegistrationsAction,
   deleteRegistrationAction,
-  getUnmaskedChildCNPAction,
+  deleteMultipleRegistrationsAction,
 } from '@/features/registrations/actions';
 import { Button } from '@/components/ui/button';
 import { Plus, Users, RefreshCw, Download } from 'lucide-react';
@@ -16,6 +16,7 @@ export default function RegistrationsPage() {
   const [data, setData] = React.useState<RegistrationRowData[]>([]);
   const [totalCount, setTotalCount] = React.useState(0);
   const [page, setPage] = React.useState(1);
+  const [pageSize, setPageSize] = React.useState(50);
   const [totalPages, setTotalPages] = React.useState(1);
   const [loading, setLoading] = React.useState(true);
 
@@ -32,7 +33,7 @@ export default function RegistrationsPage() {
       const res = await fetchRegistrationsAction({
         ...filters,
         page,
-        pageSize: 10,
+        pageSize,
       });
       setData(res.registrations as unknown as RegistrationRowData[]);
       setTotalCount(res.totalCount);
@@ -42,7 +43,7 @@ export default function RegistrationsPage() {
     } finally {
       setLoading(false);
     }
-  }, [filters, page]);
+  }, [filters, page, pageSize]);
 
   React.useEffect(() => {
     loadData();
@@ -53,8 +54,18 @@ export default function RegistrationsPage() {
     setPage(1);
   }, []);
 
+  const handlePageSizeChange = React.useCallback((newSize: number) => {
+    setPageSize(newSize);
+    setPage(1);
+  }, []);
+
   async function handleDelete(id: string) {
     await deleteRegistrationAction(id);
+    loadData();
+  }
+
+  async function handleBulkDelete(ids: string[]) {
+    await deleteMultipleRegistrationsAction(ids);
     loadData();
   }
 
@@ -127,14 +138,14 @@ export default function RegistrationsPage() {
           data={data}
           totalCount={totalCount}
           page={page}
-          pageSize={10}
+          pageSize={pageSize}
           totalPages={totalPages}
           onPageChange={setPage}
+          onPageSizeChange={handlePageSizeChange}
           canEdit={true}
           canDelete={true}
-          canUnmaskCNP={true}
           onDeleteRequest={handleDelete}
-          onUnmaskChildCNP={getUnmaskedChildCNPAction}
+          onBulkDeleteRequest={handleBulkDelete}
         />
       )}
     </div>
