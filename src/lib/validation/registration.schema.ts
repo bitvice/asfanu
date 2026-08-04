@@ -10,7 +10,15 @@ export const childSchema = z.object({
   cnp: z.string().nullable().optional().or(z.literal('')).refine((val) => !val || validateCNP(val).isValid, {
     message: 'CNP-ul este invalid (trebuie să conțină 13 cifre cu cifră de control validă).',
   }),
-  age: z.number().int().min(0).max(18).nullable().optional(),
+  // Age is stored as derived/historical data and is not editable in this form.
+  // A registration must remain editable after the child turns 19.
+  age: z
+    .number({ invalid_type_error: 'Vârsta copilului trebuie să fie un număr.' })
+    .int('Vârsta copilului trebuie să fie un număr întreg.')
+    .min(0, 'Vârsta copilului nu poate fi negativă.')
+    .max(130, 'Vârsta copilului nu poate depăși 130 de ani.')
+    .nullable()
+    .optional(),
   birth_date: z.string().nullable().optional(),
 });
 
