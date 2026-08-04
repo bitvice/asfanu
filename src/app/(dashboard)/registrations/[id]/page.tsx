@@ -1,11 +1,10 @@
 'use client';
 
 import * as React from 'react';
-import { fetchRegistrationByIdAction, getUnmaskedChildCNPAction } from '@/features/registrations/actions';
+import { fetchRegistrationByIdAction } from '@/features/registrations/actions';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { MaskedCNP } from '@/components/registrations/MaskedCNP';
 import { ChildEditDialog } from '@/components/registrations/ChildEditDialog';
 import { ChildAddDialog } from '@/components/registrations/ChildAddDialog';
 import { calculateCurrentAge, parseBirthDate } from '@/lib/children/age';
@@ -22,6 +21,7 @@ interface RegistrationDetail {
   secondary_email?: string | null;
   phone: string;
   postal_address?: string | null;
+  postal_code?: string | null;
   county: string;
   city: string;
   comments?: string | null;
@@ -136,10 +136,20 @@ export default function RegistrationDetailPage() {
               <span className="text-slate-500 flex items-center gap-1.5"><MapPin className="w-3.5 h-3.5" /> Locație:</span>
               <Badge variant="secondary">{data.county}, {data.city}</Badge>
             </div>
-            {data.postal_address && (
+            {(data.postal_address || data.postal_code) && (
               <div className="pt-2 border-t border-slate-100 dark:border-slate-800">
-                <span className="text-slate-500 block mb-1">Adresă Poștală:</span>
-                <p className="text-slate-800 dark:text-slate-200">{data.postal_address}</p>
+                {data.postal_address && (
+                  <>
+                    <span className="text-slate-500 block mb-1">Adresă Poștală:</span>
+                    <p className="text-slate-800 dark:text-slate-200">{data.postal_address}</p>
+                  </>
+                )}
+                {data.postal_code && (
+                  <div className={data.postal_address ? 'mt-2' : undefined}>
+                    <span className="text-slate-500 block mb-1">Cod Poștal:</span>
+                    <p className="font-mono text-slate-800 dark:text-slate-200">{data.postal_code}</p>
+                  </div>
+                )}
               </div>
             )}
           </CardContent>
@@ -203,7 +213,7 @@ export default function RegistrationDetailPage() {
                     <ChildEditDialog registrationId={data.id} child={child} onSaved={loadDetail} />
                   </div>
 
-                  <div className="grid gap-3 border-t border-slate-200 pt-3 dark:border-slate-800 sm:grid-cols-3">
+                  <div className="grid gap-3 border-t border-slate-200 pt-3 dark:border-slate-800 sm:grid-cols-2">
                     <div>
                       <span className="block text-[10px] uppercase tracking-wide text-slate-400">Anul nașterii</span>
                       <span className="font-semibold">{birthYear ?? 'Nespecificat'}</span>
@@ -212,19 +222,26 @@ export default function RegistrationDetailPage() {
                       <span className="block text-[10px] uppercase tracking-wide text-slate-400">Vârsta curentă</span>
                       <span className="font-semibold">{currentAge !== null ? `${currentAge} ani` : 'Nespecificată'}</span>
                     </div>
-                    <div className="flex items-center gap-3 sm:justify-end">
-                      <span className="text-slate-500">CNP:</span>
-                      <MaskedCNP
-                        cnp={child.cnp}
-                        canUnmask={true}
-                        onUnmaskRequest={() => getUnmaskedChildCNPAction(child.id)}
-                      />
-                    </div>
                   </div>
                 </div>
               );
             })
           )}
+
+          <div className="grid gap-4 border-t border-slate-200 pt-5 dark:border-slate-800 md:grid-cols-2">
+            <div className="rounded-lg bg-slate-50 p-4 dark:bg-slate-900/50">
+              <h3 className="mb-2 text-xs font-bold text-slate-700 dark:text-slate-300">Comentarii</h3>
+              <p className="whitespace-pre-wrap text-xs leading-relaxed text-slate-600 dark:text-slate-400">
+                {data.comments?.trim() || 'Nu există comentarii.'}
+              </p>
+            </div>
+            <div className="rounded-lg bg-slate-50 p-4 dark:bg-slate-900/50">
+              <h3 className="mb-2 text-xs font-bold text-slate-700 dark:text-slate-300">Observații</h3>
+              <p className="whitespace-pre-wrap text-xs leading-relaxed text-slate-600 dark:text-slate-400">
+                {data.internal_notes?.trim() || 'Nu există observații.'}
+              </p>
+            </div>
+          </div>
         </CardContent>
       </Card>
     </div>

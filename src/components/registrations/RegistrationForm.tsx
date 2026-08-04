@@ -6,6 +6,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { registrationSchema, RegistrationFormValues } from '@/lib/validation/registration.schema';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Plus, Trash2, Save, ArrowLeft, User, Baby, AlertCircle } from 'lucide-react';
@@ -39,6 +40,7 @@ export function RegistrationForm({ initialValues, onSubmitAction, isEditMode = f
       secondary_email: initialValues?.secondary_email || '',
       phone: initialValues?.phone || '',
       postal_address: initialValues?.postal_address || '',
+      postal_code: initialValues?.postal_code || '',
       county: initialValues?.county || '',
       city: initialValues?.city || '',
       comments: initialValues?.comments || '',
@@ -185,11 +187,24 @@ export function RegistrationForm({ initialValues, onSubmitAction, isEditMode = f
             )}
           </div>
 
-          <div className="md:col-span-2">
+          <div>
             <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-              Adresă Poștală Complete
+              Adresă Poștală Completă
             </label>
             <Input {...register('postal_address')} placeholder="Str. Republicii, Nr. 12, Bl. A, Ap. 4" className="mt-1" />
+          </div>
+
+          <div>
+            <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+              Cod Poștal
+            </label>
+            <Input
+              {...register('postal_code')}
+              inputMode="numeric"
+              autoComplete="postal-code"
+              placeholder="500123"
+              className="mt-1"
+            />
           </div>
 
           <div className="md:col-span-2 flex items-center gap-2 pt-2">
@@ -295,6 +310,38 @@ export function RegistrationForm({ initialValues, onSubmitAction, isEditMode = f
               </div>
             ))
           )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="border-b border-slate-100 dark:border-slate-800 pb-4">
+          <CardTitle className="text-base font-bold text-indigo-700 dark:text-indigo-400">
+            Comentarii & Observații
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="grid gap-4 pt-6 md:grid-cols-2">
+          <div>
+            <label htmlFor="comments" className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+              Comentarii
+            </label>
+            <Textarea
+              id="comments"
+              {...register('comments')}
+              placeholder="Adăugați comentarii despre familie..."
+              className="mt-1"
+            />
+          </div>
+          <div>
+            <label htmlFor="internal_notes" className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+              Observații
+            </label>
+            <Textarea
+              id="internal_notes"
+              {...register('internal_notes')}
+              placeholder="Adăugați observații despre familie..."
+              className="mt-1"
+            />
+          </div>
         </CardContent>
       </Card>
     </form>

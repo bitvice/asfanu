@@ -34,6 +34,7 @@ export const registrationSchema = z.object({
     message: 'Numărul de telefon este invalid (ex: 0721234567).',
   }),
   postal_address: z.string().nullable().optional(),
+  postal_code: z.string().nullable().optional(),
   county: z.string().min(1, 'Județul este obligatoriu.'),
   city: z.string().min(1, 'Orașul este obligatoriu.'),
   comments: z.string().nullable().optional(),

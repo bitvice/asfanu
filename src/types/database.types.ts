@@ -97,6 +97,7 @@ export interface Database {
           secondary_email: string | null;
           phone: string;
           postal_address: string | null;
+          postal_code: string | null;
           county: string;
           city: string;
           comments: string | null;
@@ -121,6 +122,7 @@ export interface Database {
           secondary_email?: string | null;
           phone: string;
           postal_address?: string | null;
+          postal_code?: string | null;
           county: string;
           city: string;
           comments?: string | null;
@@ -145,6 +147,7 @@ export interface Database {
           secondary_email?: string | null;
           phone?: string;
           postal_address?: string | null;
+          postal_code?: string | null;
           county?: string;
           city?: string;
           comments?: string | null;
