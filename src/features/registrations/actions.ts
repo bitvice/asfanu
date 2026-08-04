@@ -164,21 +164,51 @@ export async function updateRegistrationAction(id: string, rawValues: Registrati
     return { error: `Eroare la actualizarea înregistrării: ${updateError.message}` };
   }
 
-  // Delete existing children and replace with updated entries
-  await supabase.from('children').delete().eq('registration_id', id);
+  // Preserve existing child rows. Replacing every row required DELETE permission
+  // even when the user only edited the parent, and RLS intentionally reserves
+  // deletion for admins.
+  const { data: existingChildren, error: existingChildrenError } = await supabase
+    .from('children')
+    .select('id')
+    .eq('registration_id', id);
 
-  if (values.children && values.children.length > 0) {
-    const childrenToInsert = values.children.map((child) => ({
-      registration_id: id,
+  if (existingChildrenError) {
+    return { error: `Datele părintelui au fost actualizate, dar copiii nu au putut fi verificați: ${existingChildrenError.message}` };
+  }
+
+  const submittedIds = new Set(values.children.flatMap((child) => child.id ? [child.id] : []));
+  const removedIds = (existingChildren || []).map((child) => child.id).filter((childId) => !submittedIds.has(childId));
+
+  if (removedIds.length > 0) {
+    const { data: deletedChildren, error: deleteChildrenError } = await supabase
+      .from('children')
+      .delete()
+      .eq('registration_id', id)
+      .in('id', removedIds)
+      .select('id');
+
+    if (deleteChildrenError || deletedChildren?.length !== removedIds.length) {
+      return { error: 'Datele părintelui au fost actualizate, dar unul sau mai mulți copii nu au putut fi șterși. Verificați permisiunile contului.' };
+    }
+  }
+
+  for (const child of values.children) {
+    const childValues = {
       first_name: child.first_name,
       last_name: child.last_name,
       email: child.email || null,
       cnp: child.cnp,
       age: child.age || null,
       birth_date: child.birth_date || null,
-    }));
+    };
 
-    await supabase.from('children').insert(childrenToInsert);
+    const result = child.id
+      ? await supabase.from('children').update(childValues).eq('id', child.id).eq('registration_id', id).select('id').maybeSingle()
+      : await supabase.from('children').insert({ registration_id: id, ...childValues }).select('id').single();
+
+    if (result.error || !result.data) {
+      return { error: `Datele părintelui au fost actualizate, dar copilul ${child.first_name} ${child.last_name} nu a putut fi salvat: ${result.error?.message || 'operațiunea nu a fost permisă'}` };
+    }
   }
 
   await logAuditEvent({

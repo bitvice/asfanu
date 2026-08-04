@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { useForm, useFieldArray } from 'react-hook-form';
+import { useForm, useFieldArray, FieldErrors } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { registrationSchema, RegistrationFormValues } from '@/lib/validation/registration.schema';
 import { Button } from '@/components/ui/button';
@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/badge';
 import { Plus, Trash2, Save, ArrowLeft, User, Baby, AlertCircle } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { cn } from '@/lib/utils';
 
 interface RegistrationFormProps {
   initialValues?: Partial<RegistrationFormValues>;
@@ -22,6 +23,7 @@ export function RegistrationForm({ initialValues, onSubmitAction, isEditMode = f
   const router = useRouter();
   const [serverError, setServerError] = React.useState<string | null>(null);
   const [submitting, setSubmitting] = React.useState(false);
+  const errorInputClass = 'border-red-500 bg-red-50/50 focus-visible:ring-red-500 dark:border-red-500 dark:bg-red-950/20';
 
   const {
     register,
@@ -72,8 +74,22 @@ export function RegistrationForm({ initialValues, onSubmitAction, isEditMode = f
     }
   }
 
+  function onFormInvalid(validationErrors: FieldErrors<RegistrationFormValues>) {
+    const firstMessage = findFirstErrorMessage(validationErrors);
+    setServerError(firstMessage
+      ? `Formularul nu poate fi salvat: ${firstMessage}`
+      : 'Formularul nu poate fi salvat. Verificați câmpurile marcate cu roșu.');
+
+    // react-hook-form focuses the first invalid input; ensure it is also visible
+    // below the sticky page header.
+    window.setTimeout(() => {
+      const invalidInput = document.querySelector<HTMLElement>('[aria-invalid="true"]');
+      invalidInput?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }, 0);
+  }
+
   return (
-    <form onSubmit={handleSubmit(onFormSubmit)} className="space-y-6 max-w-4xl mx-auto">
+    <form onSubmit={handleSubmit(onFormSubmit, onFormInvalid)} noValidate className="space-y-6 max-w-4xl mx-auto">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Link href="/registrations">
@@ -93,9 +109,10 @@ export function RegistrationForm({ initialValues, onSubmitAction, isEditMode = f
       </div>
 
       {serverError && (
-        <div className="p-4 rounded-lg bg-red-50 dark:bg-red-950/50 border border-red-200 dark:border-red-900 text-red-700 dark:text-red-300 text-sm flex items-center gap-2">
+        <div role="alert" aria-live="assertive" className="fixed right-4 top-4 z-50 max-w-md p-4 rounded-lg bg-red-50 dark:bg-red-950 border border-red-300 dark:border-red-800 text-red-700 dark:text-red-200 text-sm flex items-start gap-2 shadow-lg">
           <AlertCircle className="w-5 h-5 shrink-0" />
           <span>{serverError}</span>
+          <button type="button" onClick={() => setServerError(null)} className="ml-2 text-lg leading-none" aria-label="Închide mesajul">×</button>
         </div>
       )}
 
@@ -112,7 +129,7 @@ export function RegistrationForm({ initialValues, onSubmitAction, isEditMode = f
             <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
               Prenume Părinte *
             </label>
-            <Input {...register('parent_first_name')} placeholder="Ion" className="mt-1" />
+            <Input {...register('parent_first_name')} aria-invalid={!!errors.parent_first_name} placeholder="Ion" className={cn('mt-1', errors.parent_first_name && errorInputClass)} />
             {errors.parent_first_name && (
               <p className="text-xs text-red-500 mt-1">{errors.parent_first_name.message}</p>
             )}
@@ -122,7 +139,7 @@ export function RegistrationForm({ initialValues, onSubmitAction, isEditMode = f
             <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
               Nume de Familie Părinte *
             </label>
-            <Input {...register('parent_last_name')} placeholder="Popescu" className="mt-1" />
+            <Input {...register('parent_last_name')} aria-invalid={!!errors.parent_last_name} placeholder="Popescu" className={cn('mt-1', errors.parent_last_name && errorInputClass)} />
             {errors.parent_last_name && (
               <p className="text-xs text-red-500 mt-1">{errors.parent_last_name.message}</p>
             )}
@@ -132,7 +149,7 @@ export function RegistrationForm({ initialValues, onSubmitAction, isEditMode = f
             <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
               Email Principal *
             </label>
-            <Input {...register('primary_email')} type="email" placeholder="ion.popescu@gmail.com" className="mt-1" />
+            <Input {...register('primary_email')} aria-invalid={!!errors.primary_email} type="email" placeholder="ion.popescu@gmail.com" className={cn('mt-1', errors.primary_email && errorInputClass)} />
             {errors.primary_email && (
               <p className="text-xs text-red-500 mt-1">{errors.primary_email.message}</p>
             )}
@@ -142,7 +159,7 @@ export function RegistrationForm({ initialValues, onSubmitAction, isEditMode = f
             <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
               Număr de Telefon
             </label>
-            <Input {...register('phone')} placeholder="0721234567" className="mt-1" />
+            <Input {...register('phone')} aria-invalid={!!errors.phone} placeholder="0721234567" className={cn('mt-1', errors.phone && errorInputClass)} />
             {errors.phone && (
               <p className="text-xs text-red-500 mt-1">{errors.phone.message}</p>
             )}
@@ -152,7 +169,7 @@ export function RegistrationForm({ initialValues, onSubmitAction, isEditMode = f
             <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
               Județ *
             </label>
-            <Input {...register('county')} placeholder="Brașov" className="mt-1" />
+            <Input {...register('county')} aria-invalid={!!errors.county} placeholder="Brașov" className={cn('mt-1', errors.county && errorInputClass)} />
             {errors.county && (
               <p className="text-xs text-red-500 mt-1">{errors.county.message}</p>
             )}
@@ -162,7 +179,7 @@ export function RegistrationForm({ initialValues, onSubmitAction, isEditMode = f
             <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
               Oraș *
             </label>
-            <Input {...register('city')} placeholder="Brașov" className="mt-1" />
+            <Input {...register('city')} aria-invalid={!!errors.city} placeholder="Brașov" className={cn('mt-1', errors.city && errorInputClass)} />
             {errors.city && (
               <p className="text-xs text-red-500 mt-1">{errors.city.message}</p>
             )}
@@ -238,7 +255,7 @@ export function RegistrationForm({ initialValues, onSubmitAction, isEditMode = f
                     <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
                       Prenume Copil *
                     </label>
-                    <Input {...register(`children.${index}.first_name`)} placeholder="Andrei" className="mt-1 bg-white dark:bg-slate-950" />
+                    <Input {...register(`children.${index}.first_name`)} aria-invalid={!!errors.children?.[index]?.first_name} placeholder="Andrei" className={cn('mt-1 bg-white dark:bg-slate-950', errors.children?.[index]?.first_name && errorInputClass)} />
                     {errors.children?.[index]?.first_name && (
                       <p className="text-xs text-red-500 mt-1">{errors.children[index]?.first_name?.message}</p>
                     )}
@@ -248,7 +265,7 @@ export function RegistrationForm({ initialValues, onSubmitAction, isEditMode = f
                     <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
                       Nume de Familie Copil *
                     </label>
-                    <Input {...register(`children.${index}.last_name`)} placeholder="Popescu" className="mt-1 bg-white dark:bg-slate-950" />
+                    <Input {...register(`children.${index}.last_name`)} aria-invalid={!!errors.children?.[index]?.last_name} placeholder="Popescu" className={cn('mt-1 bg-white dark:bg-slate-950', errors.children?.[index]?.last_name && errorInputClass)} />
                     {errors.children?.[index]?.last_name && (
                       <p className="text-xs text-red-500 mt-1">{errors.children[index]?.last_name?.message}</p>
                     )}
@@ -269,7 +286,7 @@ export function RegistrationForm({ initialValues, onSubmitAction, isEditMode = f
                     <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
                       CNP Copil (13 cifre)
                     </label>
-                    <Input {...register(`children.${index}.cnp`)} placeholder="5010101410018" className="mt-1 bg-white dark:bg-slate-950 font-mono" />
+                    <Input {...register(`children.${index}.cnp`)} aria-invalid={!!errors.children?.[index]?.cnp} placeholder="5010101410018" className={cn('mt-1 bg-white dark:bg-slate-950 font-mono', errors.children?.[index]?.cnp && errorInputClass)} />
                     {errors.children?.[index]?.cnp && (
                       <p className="text-xs text-red-500 mt-1">{errors.children[index]?.cnp?.message}</p>
                     )}
@@ -282,4 +299,16 @@ export function RegistrationForm({ initialValues, onSubmitAction, isEditMode = f
       </Card>
     </form>
   );
+}
+
+function findFirstErrorMessage(value: unknown): string | undefined {
+  if (!value || typeof value !== 'object') return undefined;
+  if ('message' in value && typeof value.message === 'string') return value.message;
+
+  for (const nestedValue of Object.values(value)) {
+    const message = findFirstErrorMessage(nestedValue);
+    if (message) return message;
+  }
+
+  return undefined;
 }
