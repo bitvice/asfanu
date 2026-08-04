@@ -26,6 +26,9 @@ interface ExportRegistration {
   city: string;
   postal_address?: string | null;
   postal_code?: string | null;
+  has_large_family_certificate: boolean;
+  large_family_certificate_number?: string | null;
+  large_family_certificate_issued_at?: string | null;
   privacy_policy_accepted: boolean;
   source: string;
   comments?: string | null;
@@ -103,6 +106,11 @@ export async function GET(request: NextRequest) {
       'Oraș': reg.city,
       'Adresă Poștală': reg.postal_address || '',
       'Cod Poștal': reg.postal_code || '',
+      'Certificat Familie Numeroasă': reg.has_large_family_certificate ? 'DA' : 'NU',
+      'Număr Certificat': reg.has_large_family_certificate ? reg.large_family_certificate_number || '' : '',
+      'Data Emitere Certificat': reg.has_large_family_certificate && reg.large_family_certificate_issued_at
+        ? new Date(`${reg.large_family_certificate_issued_at}T00:00:00`).toLocaleDateString('ro-RO')
+        : '',
       'Copii': formatChildren(reg.children),
       'Politica Confidențialitate': reg.privacy_policy_accepted ? 'DA' : 'NU',
       'Comentarii': reg.comments || '',
@@ -136,7 +144,7 @@ export async function GET(request: NextRequest) {
         `${reg.city}, ${reg.county}`,
         [reg.postal_address, reg.postal_code].filter(Boolean).join(' · '),
         formatChildren(reg.children),
-        reg.privacy_policy_accepted ? 'DA' : 'NU',
+        `Acord: ${reg.privacy_policy_accepted ? 'DA' : 'NU'}; Certificat: ${reg.has_large_family_certificate ? `DA ${reg.large_family_certificate_number || ''}` : 'NU'}`,
       ].map((value) => stripRomanianDiacritics(value)));
 
       autoTable(doc, {

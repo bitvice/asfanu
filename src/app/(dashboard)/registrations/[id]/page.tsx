@@ -22,6 +22,9 @@ interface RegistrationDetail {
   phone: string;
   postal_address?: string | null;
   postal_code?: string | null;
+  has_large_family_certificate: boolean;
+  large_family_certificate_number?: string | null;
+  large_family_certificate_issued_at?: string | null;
   county: string;
   city: string;
   comments?: string | null;
@@ -178,6 +181,32 @@ export default function RegistrationDetailPage() {
             <div className="flex items-center justify-between">
               <span className="text-slate-500">Data Înregistrării:</span>
               <span className="font-mono">{new Date(data.registered_at).toLocaleDateString('ro-RO')}</span>
+            </div>
+            <div className="border-t border-slate-100 pt-3 dark:border-slate-800">
+              <div className="flex items-center justify-between">
+                <span className="text-slate-500">Certificat familie numeroasă:</span>
+                {data.has_large_family_certificate ? (
+                  <Badge variant="success">DA</Badge>
+                ) : (
+                  <Badge variant="secondary">NU</Badge>
+                )}
+              </div>
+              {data.has_large_family_certificate && (
+                <div className="mt-3 space-y-2 pl-3 border-l-2 border-emerald-400">
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-slate-500">Număr:</span>
+                    <span className="font-mono font-semibold">{data.large_family_certificate_number}</span>
+                  </div>
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="text-slate-500">Data emiterii:</span>
+                    <span className="font-mono">
+                      {data.large_family_certificate_issued_at
+                        ? new Date(`${data.large_family_certificate_issued_at}T00:00:00`).toLocaleDateString('ro-RO')
+                        : 'Nespecificată'}
+                    </span>
+                  </div>
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>

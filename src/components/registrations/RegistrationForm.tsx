@@ -30,6 +30,7 @@ export function RegistrationForm({ initialValues, onSubmitAction, isEditMode = f
     register,
     control,
     handleSubmit,
+    watch,
     formState: { errors },
   } = useForm<RegistrationFormValues>({
     resolver: zodResolver(registrationSchema),
@@ -41,6 +42,9 @@ export function RegistrationForm({ initialValues, onSubmitAction, isEditMode = f
       phone: initialValues?.phone || '',
       postal_address: initialValues?.postal_address || '',
       postal_code: initialValues?.postal_code || '',
+      has_large_family_certificate: initialValues?.has_large_family_certificate ?? false,
+      large_family_certificate_number: initialValues?.large_family_certificate_number || '',
+      large_family_certificate_issued_at: initialValues?.large_family_certificate_issued_at || '',
       county: initialValues?.county || '',
       city: initialValues?.city || '',
       comments: initialValues?.comments || '',
@@ -53,6 +57,8 @@ export function RegistrationForm({ initialValues, onSubmitAction, isEditMode = f
       ],
     },
   });
+
+  const hasLargeFamilyCertificate = watch('has_large_family_certificate');
 
   const { fields, append, remove } = useFieldArray({
     control,
@@ -217,6 +223,54 @@ export function RegistrationForm({ initialValues, onSubmitAction, isEditMode = f
             <label htmlFor="privacy" className="text-xs text-slate-700 dark:text-slate-300">
               Acceptă Politica de Confidențialitate & Prelucrarea Datelor cu Caracter Personal
             </label>
+          </div>
+
+          <div className="md:col-span-2 border-t border-slate-100 pt-4 dark:border-slate-800">
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="large-family-certificate"
+                {...register('has_large_family_certificate')}
+                className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+              />
+              <label htmlFor="large-family-certificate" className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                Deține certificat de familie numeroasă (DA / NU)
+              </label>
+            </div>
+
+            {hasLargeFamilyCertificate && (
+              <div className="mt-4 grid gap-4 md:grid-cols-2">
+                <div>
+                  <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                    Număr certificat *
+                  </label>
+                  <Input
+                    {...register('large_family_certificate_number')}
+                    aria-invalid={!!errors.large_family_certificate_number}
+                    placeholder="Ex: 12345"
+                    className={cn('mt-1', errors.large_family_certificate_number && errorInputClass)}
+                  />
+                  {errors.large_family_certificate_number && (
+                    <p className="mt-1 text-xs text-red-500">{errors.large_family_certificate_number.message}</p>
+                  )}
+                </div>
+                <div>
+                  <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                    Data emiterii *
+                  </label>
+                  <Input
+                    {...register('large_family_certificate_issued_at')}
+                    type="date"
+                    max={new Date().toISOString().slice(0, 10)}
+                    aria-invalid={!!errors.large_family_certificate_issued_at}
+                    className={cn('mt-1', errors.large_family_certificate_issued_at && errorInputClass)}
+                  />
+                  {errors.large_family_certificate_issued_at && (
+                    <p className="mt-1 text-xs text-red-500">{errors.large_family_certificate_issued_at.message}</p>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>

@@ -98,6 +98,9 @@ export interface Database {
           phone: string;
           postal_address: string | null;
           postal_code: string | null;
+          has_large_family_certificate: boolean;
+          large_family_certificate_number: string | null;
+          large_family_certificate_issued_at: string | null;
           county: string;
           city: string;
           comments: string | null;
@@ -123,6 +126,9 @@ export interface Database {
           phone: string;
           postal_address?: string | null;
           postal_code?: string | null;
+          has_large_family_certificate?: boolean;
+          large_family_certificate_number?: string | null;
+          large_family_certificate_issued_at?: string | null;
           county: string;
           city: string;
           comments?: string | null;
@@ -148,6 +154,9 @@ export interface Database {
           phone?: string;
           postal_address?: string | null;
           postal_code?: string | null;
+          has_large_family_certificate?: boolean;
+          large_family_certificate_number?: string | null;
+          large_family_certificate_issued_at?: string | null;
           county?: string;
           city?: string;
           comments?: string | null;

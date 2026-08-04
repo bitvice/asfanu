@@ -35,6 +35,9 @@ export const registrationSchema = z.object({
   }),
   postal_address: z.string().nullable().optional(),
   postal_code: z.string().nullable().optional(),
+  has_large_family_certificate: z.boolean().default(false),
+  large_family_certificate_number: z.string().nullable().optional(),
+  large_family_certificate_issued_at: z.string().nullable().optional(),
   county: z.string().min(1, 'Județul este obligatoriu.'),
   city: z.string().min(1, 'Orașul este obligatoriu.'),
   comments: z.string().nullable().optional(),
@@ -43,6 +46,30 @@ export const registrationSchema = z.object({
   notification_email: z.string().email('Email-ul de notificare este invalid.').nullable().optional().or(z.literal('')),
   internal_notes: z.string().nullable().optional(),
   children: z.array(childSchema),
+}).superRefine((values, context) => {
+  if (!values.has_large_family_certificate) return;
+
+  if (!values.large_family_certificate_number?.trim()) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['large_family_certificate_number'],
+      message: 'Numărul certificatului este obligatoriu.',
+    });
+  }
+
+  if (!values.large_family_certificate_issued_at) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['large_family_certificate_issued_at'],
+      message: 'Data emiterii certificatului este obligatorie.',
+    });
+  } else if (new Date(`${values.large_family_certificate_issued_at}T00:00:00`) > new Date()) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['large_family_certificate_issued_at'],
+      message: 'Data emiterii certificatului nu poate fi în viitor.',
+    });
+  }
 });
 
 export type ChildFormValues = z.infer<typeof childSchema>;

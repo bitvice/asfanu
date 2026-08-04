@@ -23,6 +23,32 @@ describe('registrationSchema', () => {
     expect(registrationSchema.safeParse(validRegistration).success).toBe(true);
   });
 
+  it('requires certificate number and issue date when the family has a certificate', () => {
+    const result = registrationSchema.safeParse({
+      ...validRegistration,
+      has_large_family_certificate: true,
+      large_family_certificate_number: '',
+      large_family_certificate_issued_at: '',
+    });
+
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.flatten().fieldErrors.large_family_certificate_number).toContain('Numărul certificatului este obligatoriu.');
+      expect(result.error.flatten().fieldErrors.large_family_certificate_issued_at).toContain('Data emiterii certificatului este obligatorie.');
+    }
+  });
+
+  it('accepts complete certificate details', () => {
+    const result = registrationSchema.safeParse({
+      ...validRegistration,
+      has_large_family_certificate: true,
+      large_family_certificate_number: 'BV-12345',
+      large_family_certificate_issued_at: '2026-01-15',
+    });
+
+    expect(result.success).toBe(true);
+  });
+
   it('returns a Romanian message for an implausible age', () => {
     const result = registrationSchema.safeParse({
       ...validRegistration,
