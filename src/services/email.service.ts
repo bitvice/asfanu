@@ -20,8 +20,6 @@ export async function sendVoucherEmail({ subscriptionId, pdfBase64, customNote }
       registration_id,
       coupon_code,
       subscribed_at,
-      email_sent_at,
-      email_sent_to,
       campaigns (
         id,
         name,
@@ -43,7 +41,7 @@ export async function sendVoucherEmail({ subscriptionId, pdfBase64, customNote }
     .single();
 
   if (subError || !sub) {
-    throw new Error('Înscrierea în campanie nu a fost găsită.');
+    throw new Error(`Înscrierea în campanie nu a fost găsită. (${subError?.message || 'ID invalid'})`);
   }
 
   type RegType = { id: string; parent_first_name: string; parent_last_name: string; primary_email: string | null };
@@ -66,9 +64,19 @@ export async function sendVoucherEmail({ subscriptionId, pdfBase64, customNote }
   const smtpConfig = getSmtpConfig();
   const transport = createSmtpTransport();
 
-  // Clean base64 string if data URL prefix exists
-  const cleanBase64 = pdfBase64.replace(/^data:application\/pdf;base64,/, '');
+  // Clean base64 string if data URL prefix or filename parameter exists
+  const base64Content = pdfBase64.includes(';base64,')
+    ? pdfBase64.split(';base64,').pop() || ''
+    : pdfBase64.replace(/^data:[^;]+;base64,/, '');
+  const cleanBase64 = base64Content.replace(/\s+/g, '');
   const pdfBuffer = Buffer.from(cleanBase64, 'base64');
+
+  // Verify valid PDF magic header (%PDF)
+  const pdfHeader = pdfBuffer.toString('utf-8', 0, 4);
+  if (!pdfHeader.startsWith('%PDF')) {
+    throw new Error('Fișierul PDF generat este corupt. Vă rugăm să reîncercați trimiterea.');
+  }
+
   const filename = `Voucher_${campaign.name.replace(/[^a-zA-Z0-9]/g, '_')}_${reg.parent_last_name}_${sub.coupon_code}.pdf`;
 
   // 2. Build HTML email message
@@ -138,15 +146,19 @@ export async function sendVoucherEmail({ subscriptionId, pdfBase64, customNote }
     ],
   });
 
-  // 4. Update campaign_subscriptions record in DB with email_sent_at timestamp
+  // 4. Update campaign_subscriptions record in DB with email_sent_at timestamp (safely)
   const nowIso = new Date().toISOString();
-  await supabase
-    .from('campaign_subscriptions')
-    .update({
-      email_sent_at: nowIso,
-      email_sent_to: targetEmail,
-    })
-    .eq('id', subscriptionId);
+  try {
+    await supabase
+      .from('campaign_subscriptions')
+      .update({
+        email_sent_at: nowIso,
+        email_sent_to: targetEmail,
+      })
+      .eq('id', subscriptionId);
+  } catch {
+    // Ignore if columns do not exist on DB schema yet
+  }
 
   // 5. Log audit event
   await logAuditEvent({
