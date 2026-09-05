@@ -18,10 +18,10 @@ export async function generateCardPdfBase64(el: HTMLDivElement): Promise<string>
   const { jsPDF } = await import('jspdf');
 
   const canvas = await html2canvas(el, {
-    scale: 8, // Ultra-high resolution for PDF embedding
+    scale: 3, // High-DPI resolution (~300 DPI print quality, crisp & light)
     useCORS: true,
     allowTaint: true,
-    backgroundColor: null,
+    backgroundColor: '#ffffff',
     logging: false,
     imageTimeout: 0,
     scrollX: 0,
@@ -39,13 +39,13 @@ export async function generateCardPdfBase64(el: HTMLDivElement): Promise<string>
     },
   });
 
-  const imgData = canvas.toDataURL('image/png', 1.0);
+  const imgData = canvas.toDataURL('image/jpeg', 0.92);
 
   const pdf = new jsPDF({
     orientation: 'landscape',
     unit: 'mm',
     format: 'a4',
-    compress: false,
+    compress: true,
   });
 
   const pdfWidth = 277;
@@ -53,7 +53,7 @@ export async function generateCardPdfBase64(el: HTMLDivElement): Promise<string>
   const x = (297 - pdfWidth) / 2;
   const y = (210 - pdfHeight) / 2;
 
-  pdf.addImage(imgData, 'PNG', x, y, pdfWidth, pdfHeight, undefined, 'NONE');
+  pdf.addImage(imgData, 'JPEG', x, y, pdfWidth, pdfHeight, undefined, 'FAST');
   return pdf.output('datauristring');
 }
 
@@ -75,7 +75,7 @@ export function CampaignCardExporter({ cardRef, fileName = 'cupon-asfanu' }: Cam
       const el = cardRef.current;
       const html2canvas = (await import('html2canvas')).default;
       const canvas = await html2canvas(el, {
-        scale: 8, // Ultra-high resolution (8K / 600 DPI vector-crisp print quality)
+        scale: 4, // Crisp 300+ DPI print quality
         useCORS: true,
         allowTaint: true,
         backgroundColor: null,
@@ -127,10 +127,10 @@ export function CampaignCardExporter({ cardRef, fileName = 'cupon-asfanu' }: Cam
       const { jsPDF } = await import('jspdf');
 
       const canvas = await html2canvas(el, {
-        scale: 8, // Ultra-high resolution for PDF embedding
+        scale: 3, // High DPI print resolution
         useCORS: true,
         allowTaint: true,
-        backgroundColor: null,
+        backgroundColor: '#ffffff',
         logging: false,
         imageTimeout: 0,
         scrollX: 0,
@@ -148,14 +148,14 @@ export function CampaignCardExporter({ cardRef, fileName = 'cupon-asfanu' }: Cam
         },
       });
 
-      const imgData = canvas.toDataURL('image/png', 1.0);
+      const imgData = canvas.toDataURL('image/jpeg', 0.92);
       
-      // Standard A4 Landscape PDF format (297mm x 210mm) - uncompressed loss-free print quality
+      // Standard A4 Landscape PDF format (297mm x 210mm)
       const pdf = new jsPDF({
         orientation: 'landscape',
         unit: 'mm',
         format: 'a4',
-        compress: false,
+        compress: true,
       });
 
       // Fit card proportionally on A4 Landscape with 10mm margins
@@ -164,7 +164,7 @@ export function CampaignCardExporter({ cardRef, fileName = 'cupon-asfanu' }: Cam
       const x = (297 - pdfWidth) / 2; // 10mm margin left
       const y = (210 - pdfHeight) / 2; // ~17.6mm margin top
 
-      pdf.addImage(imgData, 'PNG', x, y, pdfWidth, pdfHeight, undefined, 'NONE');
+      pdf.addImage(imgData, 'JPEG', x, y, pdfWidth, pdfHeight, undefined, 'FAST');
       pdf.save(`${fileName}.pdf`);
     } catch (err) {
       console.error('Export PDF failed:', err);

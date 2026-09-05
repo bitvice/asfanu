@@ -131,10 +131,12 @@ export async function getCampaignById(id: string) {
   }
 
   // Subscriptions email stats
-  let { data: subsData, error: subsDataError } = await supabase
+  const { data: rawSubsData, error: subsDataError } = await supabase
     .from('campaign_subscriptions')
     .select('id, email_sent_at, registrations!inner(primary_email)')
     .eq('campaign_id', id);
+
+  let subsData = rawSubsData;
 
   if (subsDataError && subsDataError.message.includes('email_sent_at')) {
     const fallbackSubs = await supabase
