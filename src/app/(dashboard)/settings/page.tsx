@@ -6,12 +6,19 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/com
 import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Settings, ShieldAlert, Eye, Download, UserCog, RefreshCw, Key, ShieldCheck } from 'lucide-react';
+import { testSmtpConnectionAction } from '@/features/email/actions';
+import { Input } from '@/components/ui/input';
+import { Settings, ShieldAlert, Eye, Download, UserCog, RefreshCw, Key, ShieldCheck, Mail, Send, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
 
 export default function SettingsPage() {
   const [logs, setLogs] = React.useState<AuditLogItem[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
+
+  // SMTP Test state
+  const [testEmailInput, setTestEmailInput] = React.useState('gabi@bitvice.ro');
+  const [testingSmtp, setTestingSmtp] = React.useState(false);
+  const [smtpTestResult, setSmtpTestResult] = React.useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   const loadAuditLogs = React.useCallback(async () => {
     setLoading(true);
@@ -29,6 +36,25 @@ export default function SettingsPage() {
   React.useEffect(() => {
     loadAuditLogs();
   }, [loadAuditLogs]);
+
+  async function handleTestSmtpConnection(e: React.FormEvent) {
+    e.preventDefault();
+    if (!testEmailInput || !testEmailInput.trim()) return;
+    setTestingSmtp(true);
+    setSmtpTestResult(null);
+
+    const res = await testSmtpConnectionAction(testEmailInput.trim());
+
+    if (res.error) {
+      setSmtpTestResult({ type: 'error', text: res.error });
+    } else {
+      setSmtpTestResult({
+        type: 'success',
+        text: res.data?.message || `Emailul de test a fost trimis cu succes către ${testEmailInput}!`,
+      });
+    }
+    setTestingSmtp(false);
+  }
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto">
@@ -77,6 +103,86 @@ export default function SettingsPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* SMTP Service Configuration & Testing Card */}
+      <Card className="border-indigo-200 dark:border-indigo-900/60 shadow-xs">
+        <CardHeader className="pb-3 border-b border-slate-100 dark:border-slate-800">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-base font-bold flex items-center gap-2 text-indigo-600 dark:text-indigo-400">
+              <Mail className="w-4 h-4" /> Configurare & Testare Serviciu SMTP Email
+            </CardTitle>
+            <Badge variant="outline" className="text-xs font-mono bg-indigo-50 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 border-indigo-200">
+              Zoho SMTP (SSL: 465)
+            </Badge>
+          </div>
+          <CardDescription className="text-xs">
+            Verificați conexiunea cu serverul de email pentru expedierea voucherelor către familii.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="pt-4 space-y-4">
+          <div className="grid gap-3 sm:grid-cols-3 text-xs bg-slate-50 dark:bg-slate-900 p-3 rounded-lg border border-slate-200 dark:border-slate-800 font-mono">
+            <div>
+              <span className="text-slate-400 block font-sans text-[11px]">Server SMTP Host:</span>
+              <span className="font-bold text-slate-800 dark:text-slate-200">smtp.zoho.eu</span>
+            </div>
+            <div>
+              <span className="text-slate-400 block font-sans text-[11px]">Port & Securitate:</span>
+              <span className="font-bold text-slate-800 dark:text-slate-200">465 (SSL/TLS)</span>
+            </div>
+            <div>
+              <span className="text-slate-400 block font-sans text-[11px]">Adresă Expeditor:</span>
+              <span className="font-bold text-indigo-600 dark:text-indigo-400">brasov@asfanu.ro</span>
+            </div>
+          </div>
+
+          <form onSubmit={handleTestSmtpConnection} className="flex items-center gap-3 flex-wrap">
+            <div className="flex-1 min-w-[240px]">
+              <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 block mb-1">
+                Adresă Email Destinație pentru Test:
+              </label>
+              <Input
+                type="email"
+                required
+                value={testEmailInput}
+                onChange={(e) => setTestEmailInput(e.target.value)}
+                placeholder="gabi@bitvice.ro"
+                className="text-xs font-mono bg-white dark:bg-slate-950"
+              />
+            </div>
+            <div className="pt-5">
+              <Button
+                type="submit"
+                disabled={testingSmtp}
+                className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold gap-1.5 h-9"
+              >
+                {testingSmtp ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <Send className="w-3.5 h-3.5" />
+                )}
+                <span>{testingSmtp ? 'Se testează conexiunea...' : 'Trimite Mail de Test'}</span>
+              </Button>
+            </div>
+          </form>
+
+          {smtpTestResult && (
+            <div
+              className={`p-3 rounded-lg border text-xs font-medium flex items-center gap-2 ${
+                smtpTestResult.type === 'success'
+                  ? 'bg-emerald-50 dark:bg-emerald-950/50 text-emerald-800 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800'
+                  : 'bg-red-50 dark:bg-red-950/50 text-red-800 dark:text-red-300 border-red-200 dark:border-red-800'
+              }`}
+            >
+              {smtpTestResult.type === 'success' ? (
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+              ) : (
+                <AlertCircle className="w-4 h-4 text-red-600 shrink-0" />
+              )}
+              <span>{smtpTestResult.text}</span>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Audit Log Table */}
       <Card>

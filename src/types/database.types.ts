@@ -347,6 +347,8 @@ export interface Database {
           coupon_code: string;
           subscribed_at: string;
           subscribed_by: string | null;
+          email_sent_at: string | null;
+          email_sent_to: string | null;
         };
         Insert: {
           id?: string;
@@ -356,6 +358,8 @@ export interface Database {
           coupon_code?: string;
           subscribed_at?: string;
           subscribed_by?: string | null;
+          email_sent_at?: string | null;
+          email_sent_to?: string | null;
         };
         Update: {
           id?: string;
@@ -365,6 +369,8 @@ export interface Database {
           coupon_code?: string;
           subscribed_at?: string;
           subscribed_by?: string | null;
+          email_sent_at?: string | null;
+          email_sent_to?: string | null;
         };
       };
     };

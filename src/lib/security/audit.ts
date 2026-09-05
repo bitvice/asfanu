@@ -2,8 +2,24 @@ import { createClient } from '@/lib/supabase/server';
 
 export interface AuditParams {
   userId?: string;
-  action: 'READ_CNP' | 'EXPORT_REGISTRATIONS' | 'CREATE_REGISTRATION' | 'UPDATE_REGISTRATION' | 'UPDATE_CHILD' | 'DELETE_REGISTRATION' | 'DELETE_MULTIPLE_REGISTRATIONS' | 'IMPORT_EXCEL' | 'UPDATE_USER_ROLE' | 'CREATE_USER' | 'CREATE_CAMPAIGN' | 'UPDATE_CAMPAIGN' | 'SUBSCRIBE_FAMILY' | 'UNSUBSCRIBE_FAMILY';
-  entityType: 'registration' | 'child' | 'user' | 'import' | 'campaign';
+  action:
+    | 'READ_CNP'
+    | 'EXPORT_REGISTRATIONS'
+    | 'CREATE_REGISTRATION'
+    | 'UPDATE_REGISTRATION'
+    | 'UPDATE_CHILD'
+    | 'DELETE_REGISTRATION'
+    | 'DELETE_MULTIPLE_REGISTRATIONS'
+    | 'IMPORT_EXCEL'
+    | 'UPDATE_USER_ROLE'
+    | 'CREATE_USER'
+    | 'CREATE_CAMPAIGN'
+    | 'UPDATE_CAMPAIGN'
+    | 'SUBSCRIBE_FAMILY'
+    | 'UNSUBSCRIBE_FAMILY'
+    | 'SEND_VOUCHER_EMAIL'
+    | 'TEST_SMTP_CONNECTION';
+  entityType: 'registration' | 'child' | 'user' | 'import' | 'campaign' | 'campaign_subscription' | 'smtp_settings';
   entityId?: string;
   metadata?: Record<string, unknown>;
 }

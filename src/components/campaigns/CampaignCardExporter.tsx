@@ -9,6 +9,54 @@ interface CampaignCardExporterProps {
   fileName?: string;
 }
 
+export async function generateCardPdfBase64(el: HTMLDivElement): Promise<string> {
+  if (document.fonts) {
+    await document.fonts.ready;
+  }
+
+  const html2canvas = (await import('html2canvas')).default;
+  const { jsPDF } = await import('jspdf');
+
+  const canvas = await html2canvas(el, {
+    scale: 8, // Ultra-high resolution for PDF embedding
+    useCORS: true,
+    allowTaint: true,
+    backgroundColor: null,
+    logging: false,
+    imageTimeout: 0,
+    scrollX: 0,
+    scrollY: 0,
+    x: 0,
+    y: 0,
+    width: el.offsetWidth,
+    height: el.offsetHeight,
+    onclone: (clonedDoc) => {
+      const cardEl = clonedDoc.querySelector('[data-card-export="true"]') as HTMLElement;
+      if (cardEl) {
+        cardEl.style.setProperty('-webkit-font-smoothing', 'antialiased');
+        cardEl.style.textRendering = 'optimizeLegibility';
+      }
+    },
+  });
+
+  const imgData = canvas.toDataURL('image/png', 1.0);
+
+  const pdf = new jsPDF({
+    orientation: 'landscape',
+    unit: 'mm',
+    format: 'a4',
+    compress: false,
+  });
+
+  const pdfWidth = 277;
+  const pdfHeight = (277 * 270) / 428;
+  const x = (297 - pdfWidth) / 2;
+  const y = (210 - pdfHeight) / 2;
+
+  pdf.addImage(imgData, 'PNG', x, y, pdfWidth, pdfHeight, undefined, 'NONE');
+  return pdf.output('datauristring');
+}
+
 export function CampaignCardExporter({ cardRef, fileName = 'cupon-asfanu' }: CampaignCardExporterProps) {
   const [exportingType, setExportingType] = React.useState<'png' | 'pdf' | null>(null);
 

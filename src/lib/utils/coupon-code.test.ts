@@ -63,6 +63,21 @@ describe('coupon-code utility', () => {
     expect(parsed.slug).toBe('IMP');
     expect(parsed.familyNumber).toBe(1);
   });
+
+  it('correctly generates and parses coupon code for family #27 with slug IPM', () => {
+    const code = generateCouponCode({
+      slug: 'IPM',
+      date: new Date('2026-09-05'),
+      familyNumber: 27,
+    });
+
+    expect(code.startsWith('IPM260905027')).toBe(true);
+    expect(code.length).toBe(14);
+    const parsed = parseCouponCode(code);
+    expect(parsed.isValid).toBe(true);
+    expect(parsed.slug).toBe('IPM');
+    expect(parsed.familyNumber).toBe(27);
+  });
 });
 
 

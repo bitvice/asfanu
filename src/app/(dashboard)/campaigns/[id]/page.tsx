@@ -40,8 +40,15 @@ import {
   CheckCircle,
   Archive,
   Eye,
+  Mail,
+  MailCheck,
+  MailX,
+  CheckCircle2,
+  AlertCircle,
 } from 'lucide-react';
 import Link from 'next/link';
+import { generateCardPdfBase64 } from '@/components/campaigns/CampaignCardExporter';
+import { sendVoucherEmailAction } from '@/features/email/actions';
 
 const statusLabels: Record<string, { label: string; variant: 'success' | 'secondary' | 'destructive' }> = {
   active: { label: 'Activă', variant: 'success' },
@@ -54,6 +61,8 @@ interface SubscriptionWithFamily {
   coupon_code: string;
   coupon_number: number;
   subscribed_at: string;
+  email_sent_at?: string | null;
+  email_sent_to?: string | null;
   registrations: {
     id: string;
     parent_first_name: string;
@@ -104,6 +113,12 @@ export default function CampaignDetailPage() {
 
   const [selectedSubForVoucher, setSelectedSubForVoucher] = React.useState<SubscriptionWithFamily | null>(null);
 
+  // Email state
+  const [sendingEmailSubId, setSendingEmailSubId] = React.useState<string | null>(null);
+  const [emailBannerMessage, setEmailBannerMessage] = React.useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [subForEmailProcess, setSubForEmailProcess] = React.useState<SubscriptionWithFamily | null>(null);
+  const emailHiddenCardRef = React.useRef<HTMLDivElement>(null);
+
   React.useEffect(() => {
     const pathParts = window.location.pathname.split('/');
     const campaignId = pathParts[pathParts.length - 1];
@@ -133,6 +148,61 @@ export default function CampaignDetailPage() {
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
+
+  const triggerSendEmailForSub = React.useCallback(
+    async (sub: SubscriptionWithFamily, targetCardRef?: React.RefObject<HTMLDivElement | null>) => {
+      if (!sub.registrations.primary_email || !sub.registrations.primary_email.trim()) {
+        alert('Familia nu are o adresă de email definită.');
+        return;
+      }
+
+      setSendingEmailSubId(sub.id);
+      setEmailBannerMessage(null);
+
+      try {
+        const el = targetCardRef?.current || emailHiddenCardRef.current || voucherCardRef.current || cardRef.current;
+        if (!el) {
+          throw new Error('Nu s-a putut compila voucherul vizual.');
+        }
+
+        const pdfBase64 = await generateCardPdfBase64(el);
+        const res = await sendVoucherEmailAction({
+          subscriptionId: sub.id,
+          pdfBase64,
+        });
+
+        if (res.error) {
+          setEmailBannerMessage({ type: 'error', text: res.error });
+        } else {
+          setEmailBannerMessage({
+            type: 'success',
+            text: `Voucherul a fost trimis cu succes pe email către ${sub.registrations.primary_email}!`,
+          });
+          setTimeout(() => setEmailBannerMessage(null), 5000);
+          await loadDetail();
+        }
+      } catch (err: unknown) {
+        setEmailBannerMessage({ type: 'error', text: (err as Error).message || 'Eroare la trimiterea emailului.' });
+      } finally {
+        setSendingEmailSubId(null);
+      }
+    },
+    [loadDetail]
+  );
+
+  const handleTableSendEmailClick = React.useCallback((sub: SubscriptionWithFamily) => {
+    if (!sub.registrations.primary_email || !sub.registrations.primary_email.trim()) return;
+    setSubForEmailProcess(sub);
+  }, []);
+
+  React.useEffect(() => {
+    if (subForEmailProcess && emailHiddenCardRef.current) {
+      (async () => {
+        await triggerSendEmailForSub(subForEmailProcess, emailHiddenCardRef);
+        setSubForEmailProcess(null);
+      })();
+    }
+  }, [subForEmailProcess, triggerSendEmailForSub]);
 
   React.useEffect(() => {
     loadDetail();
@@ -526,11 +596,30 @@ export default function CampaignDetailPage() {
                 />
               </div>
 
-              <div className="flex items-center justify-between w-full pt-2">
-                <CampaignCardExporter
-                  cardRef={voucherCardRef}
-                  fileName={`voucher-${selectedSubForVoucher.coupon_code}`}
-                />
+              <div className="flex flex-wrap items-center justify-between w-full pt-2 gap-2">
+                <div className="flex items-center gap-2">
+                  <CampaignCardExporter
+                    cardRef={voucherCardRef}
+                    fileName={`voucher-${selectedSubForVoucher.coupon_code}`}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    disabled={!selectedSubForVoucher.registrations.primary_email || sendingEmailSubId === selectedSubForVoucher.id}
+                    onClick={() => triggerSendEmailForSub(selectedSubForVoucher, voucherCardRef)}
+                    className="text-xs gap-1.5 font-semibold text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 disabled:opacity-50"
+                    title={!selectedSubForVoucher.registrations.primary_email ? 'Familia nu are o adresă de email definită' : `Trimite pe email la ${selectedSubForVoucher.registrations.primary_email}`}
+                  >
+                    {sendingEmailSubId === selectedSubForVoucher.id ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin text-indigo-600" />
+                    ) : (
+                      <Mail className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+                    )}
+                    <span>{sendingEmailSubId === selectedSubForVoucher.id ? 'Se trimite...' : 'Trimite pe Email'}</span>
+                  </Button>
+                </div>
+
                 <DialogClose asChild>
                   <Button variant="outline" size="sm" className="text-xs">
                     Închide
@@ -541,6 +630,42 @@ export default function CampaignDetailPage() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Hidden offscreen Card preview for background PDF rendering */}
+      {subForEmailProcess && (
+        <div className="fixed -left-[9999px] -top-[9999px] opacity-0 pointer-events-none">
+          <CampaignCardPreview
+            cardRef={emailHiddenCardRef}
+            campaignName={campaign.name}
+            discountPercentage={campaign.discount_percentage}
+            couponCode={subForEmailProcess.coupon_code}
+            familyName={formatVoucherName(
+              subForEmailProcess.registrations.parent_last_name,
+              subForEmailProcess.registrations.parent_first_name
+            )}
+            templateConfig={templateConfig}
+            scale={1.35}
+          />
+        </div>
+      )}
+
+      {/* Email Feedback Banner */}
+      {emailBannerMessage && (
+        <div
+          className={`p-3.5 rounded-xl border text-xs font-semibold flex items-center gap-2.5 transition-all shadow-sm ${
+            emailBannerMessage.type === 'success'
+              ? 'bg-emerald-50 dark:bg-emerald-950/50 text-emerald-800 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800'
+              : 'bg-red-50 dark:bg-red-950/50 text-red-800 dark:text-red-300 border-red-200 dark:border-red-800'
+          }`}
+        >
+          {emailBannerMessage.type === 'success' ? (
+            <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+          ) : (
+            <AlertCircle className="w-4 h-4 text-red-600 shrink-0" />
+          )}
+          <span>{emailBannerMessage.text}</span>
+        </div>
+      )}
 
       {/* Tabs */}
       <Tabs defaultValue="subscriptions">
@@ -556,11 +681,56 @@ export default function CampaignDetailPage() {
         </TabsList>
 
         {/* Tab: Subscriptions */}
-        <TabsContent value="subscriptions">
+        <TabsContent value="subscriptions" className="space-y-4">
+          {/* Email Report Cards */}
+          {(() => {
+            const totalSubs = campaign.subscription_count || 0;
+            const sentCount = campaign.emails_sent_count || 0;
+            const missingCount = campaign.missing_email_count || 0;
+            const pct = totalSubs > 0 ? Math.round((sentCount / totalSubs) * 100) : 0;
+
+            return (
+              <div className="grid gap-3 sm:grid-cols-3">
+                <Card className="border-indigo-100 dark:border-indigo-950 bg-indigo-50/40 dark:bg-indigo-950/20">
+                  <CardContent className="p-3.5 flex items-center justify-between">
+                    <div>
+                      <p className="text-[11px] font-bold uppercase tracking-wider text-indigo-900 dark:text-indigo-300">Familii Înscrise</p>
+                      <p className="text-2xl font-extrabold text-indigo-950 dark:text-indigo-100">{totalSubs}</p>
+                    </div>
+                    <Users className="w-7 h-7 text-indigo-600 dark:text-indigo-400 opacity-80" />
+                  </CardContent>
+                </Card>
+
+                <Card className="border-emerald-100 dark:border-emerald-950 bg-emerald-50/40 dark:bg-emerald-950/20">
+                  <CardContent className="p-3.5 flex items-center justify-between">
+                    <div>
+                      <p className="text-[11px] font-bold uppercase tracking-wider text-emerald-900 dark:text-emerald-300">Vouchere Trimise pe Mail</p>
+                      <div className="flex items-baseline gap-2">
+                        <p className="text-2xl font-extrabold text-emerald-950 dark:text-emerald-100">{sentCount} <span className="text-xs font-normal text-emerald-700">/ {totalSubs}</span></p>
+                        <Badge className="bg-emerald-600 text-white text-[10px] font-mono font-bold">{pct}%</Badge>
+                      </div>
+                    </div>
+                    <MailCheck className="w-7 h-7 text-emerald-600 dark:text-emerald-400 opacity-80" />
+                  </CardContent>
+                </Card>
+
+                <Card className="border-amber-100 dark:border-amber-950 bg-amber-50/40 dark:bg-amber-950/20">
+                  <CardContent className="p-3.5 flex items-center justify-between">
+                    <div>
+                      <p className="text-[11px] font-bold uppercase tracking-wider text-amber-900 dark:text-amber-300">Fără Adresă Email</p>
+                      <p className="text-2xl font-extrabold text-amber-950 dark:text-amber-100">{missingCount} <span className="text-xs font-normal text-amber-700">familii</span></p>
+                    </div>
+                    <MailX className="w-7 h-7 text-amber-600 dark:text-amber-400 opacity-80" />
+                  </CardContent>
+                </Card>
+              </div>
+            );
+          })()}
+
           <Card>
-            <CardHeader className="border-b border-slate-100 dark:border-slate-800 pb-3">
+            <CardHeader className="border-b border-slate-100 dark:border-slate-800 pb-3 flex flex-row items-center justify-between">
               <CardTitle className="text-sm font-bold flex items-center gap-2 text-indigo-600 dark:text-indigo-400">
-                <Users className="w-4 h-4" /> Familii Participante
+                <Users className="w-4 h-4" /> Familii Participante & Stare Expediere
               </CardTitle>
             </CardHeader>
             <CardContent className="pt-4">
@@ -570,31 +740,69 @@ export default function CampaignDetailPage() {
                 </p>
               ) : (
                 <div className="space-y-2">
-                  {subscriptions.map((sub) => (
-                    <div
-                      key={sub.id}
-                      className="flex items-center justify-between p-3 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 text-xs"
-                    >
-                      <div className="flex items-center gap-4">
-                        <div>
-                          <Link
-                            href={`/registrations/${sub.registrations.id}`}
-                            className="font-bold text-slate-900 dark:text-slate-100 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
-                          >
-                            {sub.registrations.parent_last_name} {sub.registrations.parent_first_name}
-                          </Link>
-                          <p className="text-slate-500 text-[11px]">
-                            {sub.registrations.primary_email} · {sub.registrations.county}, {sub.registrations.city}
-                          </p>
+                  {subscriptions.map((sub) => {
+                    const hasEmail = Boolean(sub.registrations.primary_email && sub.registrations.primary_email.trim());
+                    const isEmailSent = Boolean(sub.email_sent_at);
+                    const isSendingThisSub = sendingEmailSubId === sub.id;
+
+                    return (
+                      <div
+                        key={sub.id}
+                        className="flex items-center justify-between p-3 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 text-xs flex-wrap sm:flex-nowrap gap-3"
+                      >
+                        <div className="flex items-center gap-3 min-w-[220px]">
+                          <div>
+                            <Link
+                              href={`/registrations/${sub.registrations.id}`}
+                              className="font-bold text-slate-900 dark:text-slate-100 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
+                            >
+                              {sub.registrations.parent_last_name} {sub.registrations.parent_first_name}
+                            </Link>
+                            <p className="text-slate-500 text-[11px] flex items-center gap-1">
+                              <span>{hasEmail ? sub.registrations.primary_email : <span className="text-red-500 italic font-semibold">(Fără email definit)</span>}</span>
+                              <span>·</span>
+                              <span>{sub.registrations.county}, {sub.registrations.city}</span>
+                            </p>
+                          </div>
                         </div>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <div className="text-right">
+
+                        <div className="flex items-center gap-3">
+                          {/* Email status badge */}
+                          {isEmailSent ? (
+                            <Badge variant="outline" className="text-[10px] bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800 gap-1 py-0.5 whitespace-nowrap">
+                              <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                              <span>Trimis la {new Date(sub.email_sent_at!).toLocaleDateString('ro-RO')}</span>
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline" className="text-[10px] bg-slate-100 dark:bg-slate-800 text-slate-500 border-slate-200 dark:border-slate-700 py-0.5 whitespace-nowrap">
+                              Netrimis
+                            </Badge>
+                          )}
+
+                          {/* Send Email Action Button */}
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            disabled={!hasEmail || isSendingThisSub || sendingEmailSubId !== null}
+                            onClick={() => handleTableSendEmailClick(sub)}
+                            className="h-8 gap-1.5 text-xs font-semibold text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
+                            title={!hasEmail ? 'Această familie nu are o adresă de email definită' : `Trimite voucherul PDF pe email către ${sub.registrations.primary_email}`}
+                          >
+                            {isSendingThisSub ? (
+                              <Loader2 className="w-3.5 h-3.5 animate-spin text-indigo-600" />
+                            ) : (
+                              <Mail className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+                            )}
+                            <span>{isSendingThisSub ? 'Se trimite...' : 'Trimite Mail'}</span>
+                          </Button>
+
+                          {/* Code preview button */}
                           <button
                             type="button"
                             onClick={() => setSelectedSubForVoucher(sub)}
-                            className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-indigo-50 dark:bg-indigo-950/60 hover:bg-indigo-100 dark:hover:bg-indigo-900/80 border border-indigo-200/80 dark:border-indigo-800/80 transition-all group/code text-left cursor-pointer"
-                            title="Apasă pentru a deschide voucherul compilat"
+                            className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-indigo-50 dark:bg-indigo-950/60 hover:bg-indigo-100 dark:hover:bg-indigo-900/80 border border-indigo-200/80 dark:border-indigo-800/80 transition-all group/code text-left cursor-pointer shrink-0"
+                            title="Apasă pentru a previzualiza/deschide voucherul"
                           >
                             <Hash className="w-3 h-3 text-indigo-400 group-hover/code:text-indigo-600 transition-colors" />
                             <span className="font-mono font-extrabold text-indigo-600 dark:text-indigo-400 text-xs">
@@ -602,13 +810,10 @@ export default function CampaignDetailPage() {
                             </span>
                             <Eye className="w-3.5 h-3.5 text-indigo-400 opacity-60 group-hover/code:opacity-100 ml-1 transition-opacity" />
                           </button>
-                          <p className="text-[10px] text-slate-400 mt-0.5 text-right pr-1">
-                            {new Date(sub.subscribed_at).toLocaleDateString('ro-RO')}
-                          </p>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </CardContent>
