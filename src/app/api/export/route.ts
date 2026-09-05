@@ -71,11 +71,20 @@ export async function GET(request: NextRequest) {
     const city = searchParams.get('city');
     const privacyPolicy = searchParams.get('privacyPolicyAccepted');
 
+    const sortBy = searchParams.get('sortBy') || 'family_number';
+    const sortOrder = searchParams.get('sortOrder') === 'desc' ? 'desc' : 'asc';
+    const sortAsc = sortOrder === 'asc';
+
     const supabase = await createClient();
     let query = supabase
       .from('registrations')
-      .select('*, children(first_name, last_name, birth_date)')
-      .order('registered_at', { ascending: false });
+      .select('*, children(first_name, last_name, birth_date)');
+
+    if (sortBy === 'parent_last_name') {
+      query = query.order('parent_last_name', { ascending: sortAsc });
+    } else {
+      query = query.order('registered_at', { ascending: sortAsc });
+    }
 
     if (search) {
       const clean = `%${search.trim()}%`;
@@ -95,6 +104,14 @@ export async function GET(request: NextRequest) {
     }
 
     const registrations = (data || []) as unknown as ExportRegistration[];
+
+    if (sortBy === 'children_count') {
+      registrations.sort((a, b) => {
+        const countA = a.children?.length || 0;
+        const countB = b.children?.length || 0;
+        return sortAsc ? countA - countB : countB - countA;
+      });
+    }
     const exportRows = registrations.map((reg) => ({
       'Data Înregistrării': reg.registered_at ? new Date(reg.registered_at).toLocaleDateString('ro-RO') : '',
       'Nume Părinte': reg.parent_last_name,

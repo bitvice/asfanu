@@ -26,7 +26,12 @@ export default function RegistrationsPage() {
     county?: string;
     city?: string;
     privacyPolicyAccepted?: boolean;
-  }>({});
+    sortBy?: string;
+    sortOrder?: 'asc' | 'desc';
+  }>({
+    sortBy: 'family_number',
+    sortOrder: 'asc',
+  });
 
   const loadData = React.useCallback(async () => {
     setLoading(true);
@@ -55,6 +60,11 @@ export default function RegistrationsPage() {
     setPage(1);
   }, []);
 
+  const handleSortChange = React.useCallback((sortBy: string, sortOrder: 'asc' | 'desc') => {
+    setFilters((prev) => ({ ...prev, sortBy, sortOrder }));
+    setPage(1);
+  }, []);
+
   const handlePageSizeChange = React.useCallback((newSize: number) => {
     setPageSize(newSize);
     setPage(1);
@@ -80,6 +90,8 @@ export default function RegistrationsPage() {
     if (typeof filters.privacyPolicyAccepted === 'boolean') {
       params.set('privacyPolicyAccepted', String(filters.privacyPolicyAccepted));
     }
+    if (filters.sortBy) params.set('sortBy', filters.sortBy);
+    if (filters.sortOrder) params.set('sortOrder', filters.sortOrder);
 
     window.open(`/api/export?${params.toString()}`, '_blank');
   }
@@ -132,7 +144,11 @@ export default function RegistrationsPage() {
         </div>
       </div>
 
-      <RegistrationFilters onFilterChange={handleFilterChange} />
+      <RegistrationFilters
+        sortBy={filters.sortBy}
+        sortOrder={filters.sortOrder}
+        onFilterChange={handleFilterChange}
+      />
 
       {loading ? (
         <div className="h-64 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex flex-col items-center justify-center gap-2.5 text-xs text-slate-500 dark:text-slate-400">
@@ -148,6 +164,9 @@ export default function RegistrationsPage() {
           totalPages={totalPages}
           onPageChange={setPage}
           onPageSizeChange={handlePageSizeChange}
+          sortBy={filters.sortBy}
+          sortOrder={filters.sortOrder}
+          onSortChange={handleSortChange}
           canEdit={true}
           canDelete={true}
           onDeleteRequest={handleDelete}

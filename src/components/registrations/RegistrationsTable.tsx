@@ -10,7 +10,7 @@ import {
 import { Table, TableHeader, TableBody, TableHead, TableRow, TableCell } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Eye, Edit, Trash2, ChevronLeft, ChevronRight, CheckCircle2, XCircle, Users, Loader2 } from 'lucide-react';
+import { Eye, Edit, Trash2, ChevronLeft, ChevronRight, CheckCircle2, XCircle, Users, Loader2, ArrowUp, ArrowDown, ArrowUpDown } from 'lucide-react';
 import Link from 'next/link';
 import { createPortal } from 'react-dom';
 
@@ -35,6 +35,9 @@ interface RegistrationsTableProps {
   pageSize: number;
   totalPages: number;
   onPageChange: (newPage: number) => void;
+  sortBy?: string;
+  sortOrder?: 'asc' | 'desc';
+  onSortChange?: (sortBy: string, sortOrder: 'asc' | 'desc') => void;
   canEdit?: boolean;
   canDelete?: boolean;
   onDeleteRequest?: (id: string) => Promise<void>;
@@ -55,6 +58,9 @@ export function RegistrationsTable({
   pageSize,
   totalPages,
   onPageChange,
+  sortBy = 'family_number',
+  sortOrder = 'asc',
+  onSortChange,
   canEdit = false,
   canDelete = false,
   onDeleteRequest,
@@ -114,6 +120,36 @@ export function RegistrationsTable({
     }
   }
 
+  const renderSortableHeader = React.useCallback(
+    (label: string, field: string) => {
+      const isActive = sortBy === field;
+      const nextOrder = isActive && sortOrder === 'asc' ? 'desc' : 'asc';
+
+      return (
+        <button
+          type="button"
+          onClick={() => onSortChange?.(field, nextOrder)}
+          className={`inline-flex items-center gap-1.5 hover:text-indigo-600 dark:hover:text-indigo-400 font-semibold transition-colors group cursor-pointer select-none ${
+            isActive ? 'text-indigo-600 dark:text-indigo-400 font-bold' : 'text-slate-700 dark:text-slate-300'
+          }`}
+          title={`Ordonează după ${label} (${nextOrder === 'asc' ? 'Crescător' : 'Descrescător'})`}
+        >
+          <span>{label}</span>
+          {isActive ? (
+            sortOrder === 'asc' ? (
+              <ArrowUp className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+            ) : (
+              <ArrowDown className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+            )
+          ) : (
+            <ArrowUpDown className="w-3.5 h-3.5 text-slate-400 opacity-40 group-hover:opacity-100 transition-opacity" />
+          )}
+        </button>
+      );
+    },
+    [sortBy, sortOrder, onSortChange]
+  );
+
   const columns = React.useMemo(
     () => [
       ...(canDelete
@@ -145,7 +181,7 @@ export function RegistrationsTable({
           ]
         : []),
       columnHelper.accessor('family_number', {
-        header: 'Nr. Familie',
+        header: () => renderSortableHeader('Nr. Familie', 'family_number'),
         cell: (info) => {
           const num = info.getValue();
           if (num === undefined || num === null) return <span className="text-slate-400 text-xs">-</span>;
@@ -168,7 +204,7 @@ export function RegistrationsTable({
       }),
       columnHelper.accessor((row) => `${row.parent_last_name} ${row.parent_first_name}`, {
         id: 'parent_name',
-        header: 'Părinte',
+        header: () => renderSortableHeader('Părinte / Titular', 'parent_last_name'),
         cell: (info) => <span className="font-semibold text-xs">{info.getValue()}</span>,
       }),
       columnHelper.accessor('primary_email', {
@@ -185,7 +221,7 @@ export function RegistrationsTable({
         cell: (info) => <Badge variant="secondary" className="text-[11px] font-medium">{info.getValue()}</Badge>,
       }),
       columnHelper.accessor('children', {
-        header: 'Număr copii',
+        header: () => renderSortableHeader('Număr copii', 'children_count'),
         cell: (info) => {
           const children = info.getValue() || [];
           const count = children.length;
@@ -213,19 +249,19 @@ export function RegistrationsTable({
       }),
       columnHelper.display({
         id: 'actions',
-        header: 'Acțiuni',
+        header: () => <div className="text-right font-medium text-slate-700 dark:text-slate-300">Acțiuni</div>,
         cell: (info) => {
           const row = info.row.original;
           return (
-            <div className="flex items-center gap-1">
+            <div className="flex items-center justify-end gap-1">
               <Link href={`/registrations/${row.id}`}>
-                <Button variant="ghost" size="icon" className="h-7 w-7 text-slate-600 hover:text-indigo-600" title="Vezi detalii">
+                <Button variant="ghost" size="icon" className="h-7 w-7 text-slate-500 hover:text-indigo-600" title="Vizualizează">
                   <Eye className="w-3.5 h-3.5" />
                 </Button>
               </Link>
               {canEdit && (
                 <Link href={`/registrations/${row.id}/edit`}>
-                  <Button variant="ghost" size="icon" className="h-7 w-7 text-slate-600 hover:text-indigo-600" title="Editează">
+                  <Button variant="ghost" size="icon" className="h-7 w-7 text-slate-500 hover:text-indigo-600" title="Editează">
                     <Edit className="w-3.5 h-3.5" />
                   </Button>
                 </Link>
@@ -241,7 +277,7 @@ export function RegistrationsTable({
                       name: `${row.parent_last_name} ${row.parent_first_name}`,
                     })
                   }
-                  className="h-7 w-7 text-slate-400 hover:text-red-600"
+                  className="h-7 w-7 text-slate-500 hover:text-red-600"
                   title="Șterge"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
@@ -252,7 +288,7 @@ export function RegistrationsTable({
         },
       }),
     ],
-    [canEdit, canDelete, onDeleteRequest, isAllPageSelected, selectedIds, toggleSelectAllPage, toggleSelectRow]
+    [canEdit, canDelete, onDeleteRequest, isAllPageSelected, selectedIds, toggleSelectAllPage, toggleSelectRow, renderSortableHeader]
   );
 
   const table = useReactTable({

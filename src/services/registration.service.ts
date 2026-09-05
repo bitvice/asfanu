@@ -90,13 +90,19 @@ export async function getRegistrations(filters: RegistrationFilters = {}, userRo
     query = query.lte('registered_at', filters.endDate);
   }
 
-  const sortColumn = filters.sortBy || 'registered_at';
-  const sortAsc = filters.sortOrder === 'asc';
+  const sortColumn = filters.sortBy || 'family_number';
+  const sortAsc = filters.sortOrder !== 'desc';
+  const isChildrenCountSort = sortColumn === 'children_count';
 
-  query = query.order(sortColumn, { ascending: sortAsc });
+  if (sortColumn === 'parent_last_name') {
+    query = query.order('parent_last_name', { ascending: sortAsc });
+  } else if (sortColumn === 'family_number' || sortColumn === 'registered_at' || !filters.sortBy) {
+    query = query.order('registered_at', { ascending: sortAsc });
+  }
 
-  // Fetch full set if filtering by family number, otherwise fetch paginated range
-  if (!hasFamilyNumFilter) {
+  // Fetch full set if filtering by family number or sorting by children count, otherwise fetch paginated range
+  const isUnpaginatedFetch = hasFamilyNumFilter || isChildrenCountSort;
+  if (!isUnpaginatedFetch) {
     query = query.range(from, to);
   }
 
@@ -141,8 +147,20 @@ export async function getRegistrations(filters: RegistrationFilters = {}, userRo
     }
   }
 
-  const finalTotalCount = hasFamilyNumFilter ? maskedData.length : (count || 0);
-  const paginatedData = hasFamilyNumFilter ? maskedData.slice(from, to + 1) : maskedData;
+  // Sort by children count in memory if requested
+  if (isChildrenCountSort) {
+    maskedData.sort((a, b) => {
+      const countA = a.children?.length || 0;
+      const countB = b.children?.length || 0;
+      if (countA !== countB) {
+        return sortAsc ? countA - countB : countB - countA;
+      }
+      return sortAsc ? (a.family_number || 0) - (b.family_number || 0) : (b.family_number || 0) - (a.family_number || 0);
+    });
+  }
+
+  const finalTotalCount = isUnpaginatedFetch ? maskedData.length : (count || 0);
+  const paginatedData = isUnpaginatedFetch ? maskedData.slice(from, to + pageSize) : maskedData;
 
   return {
     registrations: paginatedData,
