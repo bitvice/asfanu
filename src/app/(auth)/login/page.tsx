@@ -9,6 +9,16 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter }
 import { LogIn, AlertCircle } from 'lucide-react';
 import { ThemeToggle } from '@/components/shared/ThemeToggle';
 
+import { fetchPublicAccountsAction } from '@/features/users/actions';
+import { UserRole } from '@/lib/security/cnp-masker';
+
+interface AccountOption {
+  id: string;
+  full_name: string;
+  email: string;
+  role: UserRole;
+}
+
 function SubmitButton() {
   const { pending } = useFormStatus();
 
@@ -32,6 +42,27 @@ function SubmitButton() {
 
 export default function LoginPage() {
   const [errorMsg, setErrorMsg] = React.useState<string | null>(null);
+  const [accounts, setAccounts] = React.useState<AccountOption[]>([]);
+  const [selectedEmail, setSelectedEmail] = React.useState('');
+  const [loadingAccounts, setLoadingAccounts] = React.useState(true);
+
+  React.useEffect(() => {
+    async function loadAccounts() {
+      setLoadingAccounts(true);
+      try {
+        const list = await fetchPublicAccountsAction();
+        setAccounts(list as AccountOption[]);
+        if (list && list.length > 0) {
+          setSelectedEmail(list[0].email);
+        }
+      } catch {
+        // Fallback quiet handle
+      } finally {
+        setLoadingAccounts(false);
+      }
+    }
+    loadAccounts();
+  }, []);
 
   async function handleSubmit(formData: FormData) {
     setErrorMsg(null);
@@ -39,6 +70,10 @@ export default function LoginPage() {
     if (result?.error) {
       setErrorMsg(result.error);
     }
+  }
+
+  function handleSelectAccount(email: string) {
+    setSelectedEmail(email);
   }
 
   return (
@@ -65,7 +100,7 @@ export default function LoginPage() {
               Autentificare în Cont
             </CardTitle>
             <CardDescription>
-              Introduceți adresa de e-mail și parola pentru a accesa platforma.
+              Selectați un cont din listă sau introduceți e-mailul și parola.
             </CardDescription>
           </CardHeader>
           <form action={handleSubmit}>
@@ -77,6 +112,29 @@ export default function LoginPage() {
                 </div>
               )}
 
+              {/* Dynamic Account Selector Dropdown ("Lista CONT") */}
+              <div className="space-y-2">
+                <label className="text-xs font-semibold text-indigo-700 dark:text-indigo-300 flex items-center justify-between">
+                  <span>Lista CONT / Conturi Înregistrate</span>
+                  {loadingAccounts && <span className="text-[10px] text-slate-400 font-normal">Se încarcă...</span>}
+                </label>
+                <select
+                  value={selectedEmail}
+                  onChange={(e) => handleSelectAccount(e.target.value)}
+                  className="w-full h-9 rounded-md border border-indigo-200 dark:border-indigo-900 bg-indigo-50/50 dark:bg-slate-900/80 px-3 py-1 text-xs font-medium text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                >
+                  {accounts.length === 0 ? (
+                    <option value="">(Introduceți manual adresa de e-mail)</option>
+                  ) : (
+                    accounts.map((acc) => (
+                      <option key={acc.id} value={acc.email}>
+                        {acc.full_name} — {acc.email} [{acc.role.toUpperCase()}]
+                      </option>
+                    ))
+                  )}
+                </select>
+              </div>
+
               <div className="space-y-2">
                 <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
                   Adresă de E-mail
@@ -84,9 +142,11 @@ export default function LoginPage() {
                 <Input
                   type="email"
                   name="email"
+                  value={selectedEmail}
+                  onChange={(e) => setSelectedEmail(e.target.value)}
                   placeholder="operator@asfanu.ro"
                   required
-                  className="bg-white dark:bg-slate-900"
+                  className="bg-white dark:bg-slate-900 text-xs"
                 />
               </div>
 
@@ -99,7 +159,7 @@ export default function LoginPage() {
                   name="password"
                   placeholder="••••••••"
                   required
-                  className="bg-white dark:bg-slate-900"
+                  className="bg-white dark:bg-slate-900 text-xs"
                 />
               </div>
             </CardContent>
@@ -116,3 +176,4 @@ export default function LoginPage() {
     </div>
   );
 }
+

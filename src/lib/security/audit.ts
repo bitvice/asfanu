@@ -2,7 +2,7 @@ import { createClient } from '@/lib/supabase/server';
 
 export interface AuditParams {
   userId?: string;
-  action: 'READ_CNP' | 'EXPORT_REGISTRATIONS' | 'CREATE_REGISTRATION' | 'UPDATE_REGISTRATION' | 'UPDATE_CHILD' | 'DELETE_REGISTRATION' | 'DELETE_MULTIPLE_REGISTRATIONS' | 'IMPORT_EXCEL' | 'UPDATE_USER_ROLE';
+  action: 'READ_CNP' | 'EXPORT_REGISTRATIONS' | 'CREATE_REGISTRATION' | 'UPDATE_REGISTRATION' | 'UPDATE_CHILD' | 'DELETE_REGISTRATION' | 'DELETE_MULTIPLE_REGISTRATIONS' | 'IMPORT_EXCEL' | 'UPDATE_USER_ROLE' | 'CREATE_USER';
   entityType: 'registration' | 'child' | 'user' | 'import';
   entityId?: string;
   metadata?: Record<string, unknown>;

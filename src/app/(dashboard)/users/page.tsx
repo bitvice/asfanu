@@ -2,15 +2,17 @@
 
 import * as React from 'react';
 import { UserTable, UserItem } from '@/components/users/UserTable';
+import { AddUserDialog } from '@/components/users/AddUserDialog';
 import { fetchUsersAction, updateUserRoleAction } from '@/features/users/actions';
 import { UserRole } from '@/lib/security/cnp-masker';
 import { Button } from '@/components/ui/button';
-import { UserCog, RefreshCw } from 'lucide-react';
+import { UserCog, RefreshCw, UserPlus } from 'lucide-react';
 
 export default function UsersPage() {
   const [users, setUsers] = React.useState<UserItem[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
+  const [isAddUserOpen, setIsAddUserOpen] = React.useState(false);
 
   const loadUsers = React.useCallback(async () => {
     setLoading(true);
@@ -40,21 +42,32 @@ export default function UsersPage() {
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100 flex items-center gap-2">
             <UserCog className="w-6 h-6 text-indigo-600" />
             Gestionare Utilizatori & Permisiuni
           </h1>
           <p className="text-sm text-slate-500 dark:text-slate-400">
-            Administrați rolurile de acces (`admin`, `operator`, `viewer`) ale utilizatorilor aplicației.
+            Administrați rolurile de acces (`admin`, `operator`, `viewer`) și creați utilizatori noi.
           </p>
         </div>
 
-        <Button variant="outline" size="sm" onClick={loadUsers} disabled={loading} className="gap-1.5 text-xs">
-          <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
-          Reîmprospătează
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="outline" size="sm" onClick={loadUsers} disabled={loading} className="gap-1.5 text-xs">
+            <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+            Reîmprospătează
+          </Button>
+
+          <Button
+            size="sm"
+            onClick={() => setIsAddUserOpen(true)}
+            className="bg-indigo-600 hover:bg-indigo-700 text-white gap-1.5 text-xs shadow-sm font-medium"
+          >
+            <UserPlus className="w-4 h-4" />
+            Adaugă Utilizator
+          </Button>
+        </div>
       </div>
 
       {error ? (
@@ -68,6 +81,13 @@ export default function UsersPage() {
       ) : (
         <UserTable users={users} onRoleUpdate={handleRoleUpdate} />
       )}
+
+      <AddUserDialog
+        isOpen={isAddUserOpen}
+        onClose={() => setIsAddUserOpen(false)}
+        onSuccess={loadUsers}
+      />
     </div>
   );
 }
+
