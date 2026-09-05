@@ -5,6 +5,7 @@ import {
   fetchCampaignsForRegistrationAction,
   unsubscribeFamilyAction,
 } from '@/features/campaigns/actions';
+import { sendVoucherEmailAction } from '@/features/email/actions';
 import { CampaignForRegistration } from '@/services/campaign.service';
 import { SubscribeConfirmDialog } from '@/components/campaigns/SubscribeConfirmDialog';
 import {
@@ -13,7 +14,7 @@ import {
 } from '@/components/campaigns/CampaignCardPreview';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { CampaignCardExporter } from '@/components/campaigns/CampaignCardExporter';
+import { CampaignCardExporter, generateCardPdfBase64 } from '@/components/campaigns/CampaignCardExporter';
 import {
   Dialog,
   DialogContent,
@@ -37,6 +38,8 @@ import {
   ArrowRight,
   Trash2,
   Eye,
+  Send,
+  AlertCircle,
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -116,6 +119,8 @@ export function FamilyCampaignsTab({ registrationId, familyName }: FamilyCampaig
   // Voucher view modal state
   const [voucherModalCampaign, setVoucherModalCampaign] = React.useState<CampaignForRegistration | null>(null);
   const modalCardRef = React.useRef<HTMLDivElement>(null);
+  const [sendingModalEmail, setSendingModalEmail] = React.useState(false);
+  const [modalEmailResult, setModalEmailResult] = React.useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   const loadCampaigns = React.useCallback(async () => {
     setLoading(true);
@@ -132,6 +137,35 @@ export function FamilyCampaignsTab({ registrationId, familyName }: FamilyCampaig
   React.useEffect(() => {
     loadCampaigns();
   }, [loadCampaigns]);
+
+  async function handleModalSendEmail() {
+    if (!voucherModalCampaign?.subscription_id || !modalCardRef.current) return;
+    setSendingModalEmail(true);
+    setModalEmailResult(null);
+    try {
+      const pdfBase64 = await generateCardPdfBase64(modalCardRef.current);
+      const res = await sendVoucherEmailAction({
+        subscriptionId: voucherModalCampaign.subscription_id,
+        pdfBase64,
+      });
+
+      if (res.error) {
+        setModalEmailResult({ type: 'error', text: res.error });
+      } else {
+        setModalEmailResult({
+          type: 'success',
+          text: res.data?.message || 'Voucherul a fost trimis cu succes pe email!',
+        });
+      }
+    } catch (err: unknown) {
+      setModalEmailResult({
+        type: 'error',
+        text: (err as Error).message || 'Eroare la trimiterea emailului.',
+      });
+    } finally {
+      setSendingModalEmail(false);
+    }
+  }
 
   function handleSubscribeClick(campaign: CampaignForRegistration) {
     setSelectedCampaign(campaign);
@@ -445,7 +479,10 @@ export function FamilyCampaignsTab({ registrationId, familyName }: FamilyCampaig
       <Dialog
         open={!!voucherModalCampaign}
         onOpenChange={(open) => {
-          if (!open) setVoucherModalCampaign(null);
+          if (!open) {
+            setVoucherModalCampaign(null);
+            setModalEmailResult(null);
+          }
         }}
       >
         <DialogContent className="max-w-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 p-6">
@@ -475,16 +512,52 @@ export function FamilyCampaignsTab({ registrationId, familyName }: FamilyCampaig
                 />
               </div>
 
-              <div className="flex items-center justify-between w-full pt-2">
+              {modalEmailResult && (
+                <div
+                  className={`p-3 rounded-lg border text-xs font-medium flex items-center gap-2 w-full ${
+                    modalEmailResult.type === 'success'
+                      ? 'bg-emerald-50 dark:bg-emerald-950/50 text-emerald-800 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800'
+                      : 'bg-red-50 dark:bg-red-950/50 text-red-800 dark:text-red-300 border-red-200 dark:border-red-800'
+                  }`}
+                >
+                  {modalEmailResult.type === 'success' ? (
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                  ) : (
+                    <AlertCircle className="w-4 h-4 text-red-600 shrink-0" />
+                  )}
+                  <span>{modalEmailResult.text}</span>
+                </div>
+              )}
+
+              <div className="flex flex-wrap items-center justify-between w-full pt-2 gap-2">
                 <CampaignCardExporter
                   cardRef={modalCardRef}
                   fileName={`voucher-${voucherModalCampaign.coupon_code || 'asfanu'}`}
                 />
-                <DialogClose asChild>
-                  <Button variant="outline" size="sm" className="text-xs">
-                    Închide
-                  </Button>
-                </DialogClose>
+
+                <div className="flex items-center gap-2">
+                  {voucherModalCampaign.subscription_id && (
+                    <Button
+                      size="sm"
+                      disabled={sendingModalEmail}
+                      onClick={handleModalSendEmail}
+                      className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold gap-1.5 h-9"
+                    >
+                      {sendingModalEmail ? (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      ) : (
+                        <Send className="w-3.5 h-3.5" />
+                      )}
+                      <span>{sendingModalEmail ? 'Se trimite...' : 'Trimite pe Email'}</span>
+                    </Button>
+                  )}
+
+                  <DialogClose asChild>
+                    <Button variant="outline" size="sm" className="text-xs h-9">
+                      Închide
+                    </Button>
+                  </DialogClose>
+                </div>
               </div>
             </div>
           )}

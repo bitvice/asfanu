@@ -13,6 +13,7 @@ export interface CampaignWithStats extends CampaignRow {
 
 export interface CampaignForRegistration extends CampaignRow {
   is_subscribed: boolean;
+  subscription_id?: string | null;
   coupon_code: string | null;
   coupon_number: number | null;
   subscribed_at: string | null;
@@ -325,6 +326,7 @@ export async function getCampaignsForRegistration(registrationId: string): Promi
     return {
       ...campaign,
       is_subscribed: !!sub,
+      subscription_id: sub?.id || null,
       coupon_code: sub?.coupon_code || null,
       coupon_number: sub?.coupon_number || null,
       subscribed_at: sub?.subscribed_at || null,
