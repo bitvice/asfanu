@@ -9,7 +9,7 @@ import {
   deleteMultipleRegistrationsAction,
 } from '@/features/registrations/actions';
 import { Button } from '@/components/ui/button';
-import { Plus, Users, RefreshCw, Download, FileText } from 'lucide-react';
+import { Plus, Users, RefreshCw, Download, FileText, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 
 export default function RegistrationsPage() {
@@ -21,6 +21,7 @@ export default function RegistrationsPage() {
   const [loading, setLoading] = React.useState(true);
 
   const [filters, setFilters] = React.useState<{
+    familyNumber?: string;
     search?: string;
     county?: string;
     city?: string;
@@ -72,6 +73,7 @@ export default function RegistrationsPage() {
   function handleExport(format: 'pdf' | 'xlsx') {
     const params = new URLSearchParams();
     params.set('format', format);
+    if (filters.familyNumber) params.set('familyNumber', filters.familyNumber);
     if (filters.search) params.set('search', filters.search);
     if (filters.county) params.set('county', filters.county);
     if (filters.city) params.set('city', filters.city);
@@ -133,8 +135,9 @@ export default function RegistrationsPage() {
       <RegistrationFilters onFilterChange={handleFilterChange} />
 
       {loading ? (
-        <div className="h-64 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex items-center justify-center text-xs text-slate-400">
-          Se încarcă înregistrările...
+        <div className="h-64 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex flex-col items-center justify-center gap-2.5 text-xs text-slate-500 dark:text-slate-400">
+          <Loader2 className="w-6 h-6 animate-spin text-indigo-600 dark:text-indigo-400" />
+          <span>Se încarcă înregistrările...</span>
         </div>
       ) : (
         <RegistrationsTable

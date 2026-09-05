@@ -7,40 +7,56 @@ import { Search, X } from 'lucide-react';
 import { useDebounce } from '@/hooks/use-debounce';
 
 interface RegistrationFiltersProps {
-  onFilterChange: (filters: { search?: string; county?: string; city?: string; privacyPolicyAccepted?: boolean }) => void;
+  onFilterChange: (filters: { familyNumber?: string; search?: string; county?: string; city?: string; privacyPolicyAccepted?: boolean }) => void;
 }
 
 export function RegistrationFilters({ onFilterChange }: RegistrationFiltersProps) {
+  const [familyNumber, setFamilyNumber] = React.useState('');
   const [search, setSearch] = React.useState('');
   const [county, setCounty] = React.useState('');
   const [city, setCity] = React.useState('');
   const [privacyPolicy, setPrivacyPolicy] = React.useState<string>('all');
 
+  const debouncedFamilyNumber = useDebounce(familyNumber, 300);
   const debouncedSearch = useDebounce(search, 300);
 
   React.useEffect(() => {
     onFilterChange({
+      familyNumber: debouncedFamilyNumber || undefined,
       search: debouncedSearch || undefined,
       county: county || undefined,
       city: city || undefined,
       privacyPolicyAccepted: privacyPolicy === 'accepted' ? true : privacyPolicy === 'declined' ? false : undefined,
     });
-  }, [debouncedSearch, county, city, privacyPolicy, onFilterChange]);
+  }, [debouncedFamilyNumber, debouncedSearch, county, city, privacyPolicy, onFilterChange]);
 
   function handleClear() {
+    setFamilyNumber('');
     setSearch('');
     setCounty('');
     setCity('');
     setPrivacyPolicy('all');
   }
 
-  const hasActiveFilters = search || county || city || privacyPolicy !== 'all';
+  const hasActiveFilters = familyNumber || search || county || city || privacyPolicy !== 'all';
 
   return (
     <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-xs space-y-3">
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 items-center">
-        {/* Search Input */}
-        <div className="relative sm:col-span-2 lg:col-span-2">
+      <div className="flex flex-wrap lg:flex-nowrap items-center gap-3">
+        {/* Family Number Filter - Narrow input for 3-4 chars */}
+        <div className="w-24 shrink-0">
+          <Input
+            value={familyNumber}
+            onChange={(e) => setFamilyNumber(e.target.value)}
+            placeholder="# Nr."
+            maxLength={6}
+            className="bg-slate-50 dark:bg-slate-950 text-xs text-center font-mono font-bold placeholder:font-sans"
+            title="Filtrează după numărul de familie (ex: 42 sau 042)"
+          />
+        </div>
+
+        {/* Main Search Input */}
+        <div className="relative flex-1 min-w-[200px]">
           <Search className="w-4 h-4 absolute left-3 top-2.5 text-slate-400" />
           <Input
             value={search}
@@ -51,7 +67,7 @@ export function RegistrationFilters({ onFilterChange }: RegistrationFiltersProps
         </div>
 
         {/* County Filter */}
-        <div className="w-full">
+        <div className="w-full lg:w-40">
           <Input
             value={county}
             onChange={(e) => setCounty(e.target.value)}
@@ -61,7 +77,7 @@ export function RegistrationFilters({ onFilterChange }: RegistrationFiltersProps
         </div>
 
         {/* City Filter */}
-        <div className="w-full">
+        <div className="w-full lg:w-40">
           <Input
             value={city}
             onChange={(e) => setCity(e.target.value)}
@@ -71,7 +87,7 @@ export function RegistrationFilters({ onFilterChange }: RegistrationFiltersProps
         </div>
 
         {/* Privacy Policy Filter */}
-        <div className="w-full flex items-center gap-2">
+        <div className="w-full lg:w-48 flex items-center gap-2">
           <select
             value={privacyPolicy}
             onChange={(e) => setPrivacyPolicy(e.target.value)}

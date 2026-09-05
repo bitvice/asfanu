@@ -16,6 +16,7 @@ import { createPortal } from 'react-dom';
 
 export interface RegistrationRowData {
   id: string;
+  family_number?: number;
   registered_at: string;
   parent_first_name: string;
   parent_last_name: string;
@@ -143,6 +144,19 @@ export function RegistrationsTable({
             }),
           ]
         : []),
+      columnHelper.accessor('family_number', {
+        header: 'Nr. Familie',
+        cell: (info) => {
+          const num = info.getValue();
+          if (num === undefined || num === null) return <span className="text-slate-400 text-xs">-</span>;
+          const formatted = String(num).padStart(3, '0');
+          return (
+            <Badge variant="outline" className="text-xs font-mono font-bold bg-indigo-50/50 dark:bg-indigo-950/40 border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300 px-2 py-0.5">
+              #{formatted}
+            </Badge>
+          );
+        },
+      }),
       columnHelper.accessor('registered_at', {
         header: 'Data Înregistrării',
         cell: (info) => {
@@ -177,7 +191,7 @@ export function RegistrationsTable({
           const count = children.length;
           return (
             <Badge variant={count > 0 ? 'secondary' : 'outline'} className="text-xs font-semibold px-2.5 py-0.5 font-mono">
-              {count} {count === 1 ? 'copil' : 'copii'}
+              {count}
             </Badge>
           );
         },
@@ -364,16 +378,20 @@ export function RegistrationsTable({
                 </TableCell>
               </TableRow>
             ) : (
-              table.getRowModel().rows.map((row) => {
+              table.getRowModel().rows.map((row, index) => {
                 const isSelected = selectedIds.includes(row.original.id);
+                const isOdd = index % 2 === 1;
+
+                const rowBgClass = isSelected
+                  ? 'bg-red-50/30 dark:bg-red-950/20 hover:bg-red-50/50 dark:hover:bg-red-950/40'
+                  : isOdd
+                  ? 'bg-slate-50/40 dark:bg-slate-800/20 hover:bg-slate-100/40 dark:hover:bg-slate-800/40'
+                  : 'bg-white dark:bg-slate-900 hover:bg-slate-50/50 dark:hover:bg-slate-800/30';
+
                 return (
                   <TableRow
                     key={row.id}
-                    className={`transition-colors ${
-                      isSelected
-                        ? 'bg-red-50/30 dark:bg-red-950/20 hover:bg-red-50/50'
-                        : 'hover:bg-slate-50/50 dark:hover:bg-slate-800/50'
-                    }`}
+                    className={`transition-colors ${rowBgClass}`}
                   >
                     {row.getVisibleCells().map((cell) => (
                       <TableCell key={cell.id} className="py-3">

@@ -10,11 +10,13 @@ import {
   UserCog,
   Settings,
   Heart,
+  Megaphone,
 } from 'lucide-react';
 
 export const navigationItems = [
   { name: 'Panou Principal', href: '/dashboard', icon: LayoutDashboard },
   { name: 'Înregistrări', href: '/registrations', icon: Users },
+  { name: 'Campanii', href: '/campaigns', icon: Megaphone },
   { name: 'Import Excel', href: '/imports', icon: FileSpreadsheet },
   { name: 'Utilizatori', href: '/users', icon: UserCog },
   { name: 'Setări', href: '/settings', icon: Settings },

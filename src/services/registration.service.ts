@@ -11,6 +11,7 @@ export interface RegistrationWithChildren extends RegistrationRow {
 }
 
 export interface RegistrationFilters {
+  familyNumber?: string;
   search?: string;
   county?: string;
   city?: string;
@@ -21,6 +22,28 @@ export interface RegistrationFilters {
   pageSize?: number;
   sortBy?: string;
   sortOrder?: 'asc' | 'desc';
+}
+
+async function getChronologicalFamilyMap(
+  supabase: Awaited<ReturnType<typeof createClient>>
+): Promise<Map<string, number>> {
+  const familyMap = new Map<string, number>();
+  try {
+    const { data } = await supabase
+      .from('registrations')
+      .select('id, registered_at')
+      .order('registered_at', { ascending: true });
+
+    if (data && data.length > 0) {
+      data.forEach((r: { id: string }, idx: number) => {
+        familyMap.set(r.id, idx + 1);
+      });
+    }
+  } catch {
+    // Quiet fallback
+  }
+
+  return familyMap;
 }
 
 export async function getRegistrations(filters: RegistrationFilters = {}, userRole: UserRole = 'viewer') {
@@ -37,8 +60,11 @@ export async function getRegistrations(filters: RegistrationFilters = {}, userRo
       children (*)
     `, { count: 'exact' });
 
+  const hasFamilyNumFilter = Boolean(filters.familyNumber && filters.familyNumber.trim().length > 0);
+
   if (filters.search) {
-    const searchClean = `%${filters.search.trim()}%`;
+    const rawSearch = filters.search.trim();
+    const searchClean = `%${rawSearch}%`;
     query = query.or(
       `parent_first_name.ilike.${searchClean},parent_last_name.ilike.${searchClean},primary_email.ilike.${searchClean},phone.ilike.${searchClean}`
     );
@@ -67,7 +93,12 @@ export async function getRegistrations(filters: RegistrationFilters = {}, userRo
   const sortColumn = filters.sortBy || 'registered_at';
   const sortAsc = filters.sortOrder === 'asc';
 
-  query = query.order(sortColumn, { ascending: sortAsc }).range(from, to);
+  query = query.order(sortColumn, { ascending: sortAsc });
+
+  // Fetch full set if filtering by family number, otherwise fetch paginated range
+  if (!hasFamilyNumFilter) {
+    query = query.range(from, to);
+  }
 
   const { data, error, count } = await query;
 
@@ -77,8 +108,17 @@ export async function getRegistrations(filters: RegistrationFilters = {}, userRo
 
   const rawList = (data as unknown as RegistrationWithChildren[]) || [];
 
+  // Build unified chronological family_number map (oldest registration = #1)
+  const familyMap = await getChronologicalFamilyMap(supabase);
+
+  // Attach consistent family_number to each registration
+  const listWithFamilyNumbers = rawList.map((reg, idx) => ({
+    ...reg,
+    family_number: reg.family_number || familyMap.get(reg.id) || (from + idx + 1),
+  }));
+
   // Mask CNP for children if user is not authorized to view raw CNP
-  const maskedData = rawList.map((reg: RegistrationWithChildren) => ({
+  let maskedData = listWithFamilyNumbers.map((reg) => ({
     ...reg,
     children: (reg.children || []).map((child: ChildRow) => ({
       ...child,
@@ -86,12 +126,30 @@ export async function getRegistrations(filters: RegistrationFilters = {}, userRo
     })),
   }));
 
+  // Filter by family number
+  if (hasFamilyNumFilter && filters.familyNumber) {
+    const rawClean = filters.familyNumber.trim().replace(/^#/, '');
+    const cleanDigits = rawClean.replace(/^0+/, '');
+    const numVal = parseInt(cleanDigits, 10);
+
+    if (rawClean.length > 0) {
+      maskedData = maskedData.filter((reg) => {
+        if (!isNaN(numVal) && reg.family_number === numVal) return true;
+        const formattedNum = String(reg.family_number).padStart(3, '0');
+        return formattedNum.includes(rawClean) || String(reg.family_number).includes(rawClean);
+      });
+    }
+  }
+
+  const finalTotalCount = hasFamilyNumFilter ? maskedData.length : (count || 0);
+  const paginatedData = hasFamilyNumFilter ? maskedData.slice(from, to + 1) : maskedData;
+
   return {
-    registrations: maskedData,
-    totalCount: count || 0,
+    registrations: paginatedData,
+    totalCount: finalTotalCount,
     page,
     pageSize,
-    totalPages: Math.ceil((count || 0) / pageSize),
+    totalPages: Math.ceil(finalTotalCount / pageSize) || 1,
   };
 }
 
@@ -124,8 +182,12 @@ export async function getRegistrationById(id: string, userRole: UserRole = 'view
     });
   }
 
+  const familyMap = await getChronologicalFamilyMap(supabase);
+  const familyNum = record.family_number || familyMap.get(record.id) || 1;
+
   return {
     ...record,
+    family_number: familyNum,
     children: (record.children || []).map((child: ChildRow) => ({
       ...child,
       cnp: allowUnmasked ? child.cnp : maskCNP(child.cnp),

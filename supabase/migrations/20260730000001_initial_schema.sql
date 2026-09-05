@@ -1,8 +1,11 @@
 -- Initial PostgreSQL Schema Migration for ASFANU Internal Application
 
 -- Enable required extensions
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
-CREATE EXTENSION IF NOT EXISTS "pg_trgm";
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp" WITH SCHEMA public;
+CREATE EXTENSION IF NOT EXISTS "pg_trgm" WITH SCHEMA public;
+
+-- Fallback for uuid_generate_v4 using Postgres native gen_random_uuid()
+CREATE OR REPLACE FUNCTION public.uuid_generate_v4() RETURNS uuid AS $$ SELECT gen_random_uuid(); $$ LANGUAGE sql;
 
 -- Custom Enum Types
 DO $$ BEGIN

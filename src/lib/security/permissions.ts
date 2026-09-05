@@ -23,3 +23,11 @@ export function canExportData(role: UserRole): boolean {
 export function canViewAuditLogs(role: UserRole): boolean {
   return role === 'admin';
 }
+
+export function canManageCampaigns(role: UserRole): boolean {
+  return role === 'admin' || role === 'operator';
+}
+
+export function canSubscribeFamilies(role: UserRole): boolean {
+  return role === 'admin' || role === 'operator';
+}

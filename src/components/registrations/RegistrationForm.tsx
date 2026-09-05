@@ -15,7 +15,7 @@ import { useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
 
 interface RegistrationFormProps {
-  initialValues?: Partial<RegistrationFormValues>;
+  initialValues?: Partial<RegistrationFormValues> & { family_number?: number };
   onSubmitAction: (values: RegistrationFormValues) => Promise<{ error?: string; success?: boolean; registrationId?: string }>;
   isEditMode?: boolean;
 }
@@ -106,8 +106,13 @@ export function RegistrationForm({ initialValues, onSubmitAction, isEditMode = f
               Înapoi
             </Button>
           </Link>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">
-            {isEditMode ? 'Editare Înregistrare' : 'Adăugare Înregistrare Nouă'}
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100 flex items-center gap-3">
+            <span>{isEditMode ? 'Editare Înregistrare' : 'Adăugare Înregistrare Nouă'}</span>
+            {isEditMode && initialValues?.family_number && (
+              <Badge variant="outline" className="text-xs font-mono font-bold bg-indigo-50/50 dark:bg-indigo-950/40 border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300 px-2.5 py-1">
+                Familia #{String(initialValues.family_number).padStart(3, '0')}
+              </Badge>
+            )}
           </h1>
         </div>
         <Button type="submit" disabled={submitting} className="bg-indigo-600 hover:bg-indigo-700 text-white gap-2 font-medium">
@@ -127,9 +132,16 @@ export function RegistrationForm({ initialValues, onSubmitAction, isEditMode = f
       {/* Parent Information Card */}
       <Card>
         <CardHeader className="border-b border-slate-100 dark:border-slate-800 pb-4">
-          <CardTitle className="text-base font-bold flex items-center gap-2 text-indigo-700 dark:text-indigo-400">
-            <User className="w-5 h-5" />
-            Date Părinte / Înregistrare Principală
+          <CardTitle className="text-base font-bold flex items-center justify-between text-indigo-700 dark:text-indigo-400 flex-wrap gap-2">
+            <span className="flex items-center gap-2">
+              <User className="w-5 h-5" />
+              Date Părinte / Înregistrare Principală
+            </span>
+            {initialValues?.family_number && (
+              <Badge variant="outline" className="text-xs font-mono font-bold bg-indigo-50/50 dark:bg-indigo-950/40 border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300 px-2.5 py-0.5">
+                Nr. Familie: #{String(initialValues.family_number).padStart(3, '0')}
+              </Badge>
+            )}
           </CardTitle>
         </CardHeader>
         <CardContent className="grid gap-4 md:grid-cols-2 pt-6">

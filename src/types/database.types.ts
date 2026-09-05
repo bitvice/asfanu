@@ -10,6 +10,7 @@ export type UserRole = 'admin' | 'operator' | 'viewer';
 export type ImportStatus = 'pending' | 'processing' | 'completed' | 'failed' | 'completed_with_errors';
 export type RowImportStatus = 'pending' | 'imported' | 'failed' | 'skipped' | 'duplicate';
 export type DuplicateConfidence = 'exact_duplicate' | 'probable_duplicate' | 'possible_duplicate';
+export type CampaignStatus = 'draft' | 'active' | 'archived';
 
 export interface Database {
   public: {
@@ -108,6 +109,7 @@ export interface Database {
           family_details: string | null;
           notification_email: string | null;
           internal_notes: string | null;
+          family_number: number;
           created_at: string;
           updated_at: string;
           created_by: string | null;
@@ -115,6 +117,7 @@ export interface Database {
         };
         Insert: {
           id?: string;
+          family_number?: number;
           source?: string;
           source_import_id?: string | null;
           source_row_number?: number | null;
@@ -282,6 +285,86 @@ export interface Database {
           ip_address?: string | null;
           user_agent?: string | null;
           created_at?: string;
+        };
+      };
+      campaigns: {
+        Row: {
+          id: string;
+          name: string;
+          slug: string;
+          discount_percentage: number;
+          description: string | null;
+          status: CampaignStatus;
+          card_template_config: Json;
+          card_background_url: string | null;
+          start_date: string | null;
+          end_date: string | null;
+          campaign_number: number;
+          code_slug: string;
+          created_at: string;
+          updated_at: string;
+          created_by: string | null;
+        };
+        Insert: {
+          id?: string;
+          name: string;
+          slug: string;
+          campaign_number?: number;
+          code_slug?: string;
+          discount_percentage: number;
+          description?: string | null;
+          status?: CampaignStatus;
+          card_template_config?: Json;
+          card_background_url?: string | null;
+          start_date?: string | null;
+          end_date?: string | null;
+          created_at?: string;
+          updated_at?: string;
+          created_by?: string | null;
+        };
+        Update: {
+          id?: string;
+          name?: string;
+          slug?: string;
+          discount_percentage?: number;
+          description?: string | null;
+          status?: CampaignStatus;
+          card_template_config?: Json;
+          card_background_url?: string | null;
+          start_date?: string | null;
+          end_date?: string | null;
+          created_at?: string;
+          updated_at?: string;
+          created_by?: string | null;
+        };
+      };
+      campaign_subscriptions: {
+        Row: {
+          id: string;
+          campaign_id: string;
+          registration_id: string;
+          coupon_number: number;
+          coupon_code: string;
+          subscribed_at: string;
+          subscribed_by: string | null;
+        };
+        Insert: {
+          id?: string;
+          campaign_id: string;
+          registration_id: string;
+          coupon_number?: number;
+          coupon_code?: string;
+          subscribed_at?: string;
+          subscribed_by?: string | null;
+        };
+        Update: {
+          id?: string;
+          campaign_id?: string;
+          registration_id?: string;
+          coupon_number?: number;
+          coupon_code?: string;
+          subscribed_at?: string;
+          subscribed_by?: string | null;
         };
       };
     };

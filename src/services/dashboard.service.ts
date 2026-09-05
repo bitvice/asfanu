@@ -1,5 +1,14 @@
 import { createClient } from '@/lib/supabase/server';
 
+export interface ActiveCampaignMetric {
+  id: string;
+  name: string;
+  discount_percentage: number;
+  code_slug: string | null;
+  status: string;
+  subscription_count: number;
+}
+
 export interface DashboardMetrics {
   totalRegistrations: number;
   totalChildren: number;
@@ -8,6 +17,9 @@ export interface DashboardMetrics {
   missingEmailCount: number;
   missingPhoneCount: number;
   noPrivacyCount: number;
+  activeCampaignsCount: number;
+  totalCampaignSubscriptions: number;
+  activeCampaigns: ActiveCampaignMetric[];
   registrationsByCounty: Array<{ county: string; count: number }>;
   registrationsByCity: Array<{ city: string; count: number }>;
   recentImports: Array<{ id: string; file_name: string; total_rows: number; successful_rows: number; started_at: string; status: string }>;
@@ -16,7 +28,7 @@ export interface DashboardMetrics {
 export async function getDashboardMetrics(): Promise<DashboardMetrics> {
   const supabase = await createClient();
 
-  // 1. Total registrations & children counts
+  // 1. Total registrations & children & imports counts
   const { count: totalRegistrations } = await supabase
     .from('registrations')
     .select('*', { count: 'exact', head: true });
@@ -29,7 +41,43 @@ export async function getDashboardMetrics(): Promise<DashboardMetrics> {
     .from('imports')
     .select('*', { count: 'exact', head: true });
 
-  // 2. Data Quality counters
+  // 2. Campaign Metrics
+  const { count: activeCampaignsCount } = await supabase
+    .from('campaigns')
+    .select('*', { count: 'exact', head: true })
+    .eq('status', 'active');
+
+  const { count: totalCampaignSubscriptions } = await supabase
+    .from('campaign_subscriptions')
+    .select('*', { count: 'exact', head: true });
+
+  const { data: activeCampaignsData } = await supabase
+    .from('campaigns')
+    .select('id, name, discount_percentage, code_slug, status')
+    .in('status', ['active', 'draft'])
+    .order('created_at', { ascending: false })
+    .limit(6);
+
+  let activeCampaigns: ActiveCampaignMetric[] = [];
+  if (activeCampaignsData && activeCampaignsData.length > 0) {
+    const campaignIds = activeCampaignsData.map((c) => c.id);
+    const { data: subsData } = await supabase
+      .from('campaign_subscriptions')
+      .select('campaign_id')
+      .in('campaign_id', campaignIds);
+
+    const subCounts: Record<string, number> = {};
+    (subsData || []).forEach((s) => {
+      subCounts[s.campaign_id] = (subCounts[s.campaign_id] || 0) + 1;
+    });
+
+    activeCampaigns = activeCampaignsData.map((c) => ({
+      ...c,
+      subscription_count: subCounts[c.id] || 0,
+    }));
+  }
+
+  // 3. Data Quality counters
   const { count: noPrivacyCount } = await supabase
     .from('registrations')
     .select('*', { count: 'exact', head: true })
@@ -51,7 +99,7 @@ export async function getDashboardMetrics(): Promise<DashboardMetrics> {
     (c) => !c.cnp || c.cnp.trim().length !== 13
   ).length;
 
-  // 3. Geographic aggregations
+  // 4. Geographic aggregations
   const { data: allRegs } = await supabase.from('registrations').select('county, city');
 
   const countyMap: Record<string, number> = {};
@@ -72,7 +120,7 @@ export async function getDashboardMetrics(): Promise<DashboardMetrics> {
     .map(([city, count]) => ({ city, count }))
     .sort((a, b) => b.count - a.count);
 
-  // 4. Recent Imports
+  // 5. Recent Imports
   const { data: recentImportsData } = await supabase
     .from('imports')
     .select('id, file_name, total_rows, successful_rows, started_at, status')
@@ -87,6 +135,9 @@ export async function getDashboardMetrics(): Promise<DashboardMetrics> {
     missingEmailCount: missingEmailCount || 0,
     missingPhoneCount: missingPhoneCount || 0,
     noPrivacyCount: noPrivacyCount || 0,
+    activeCampaignsCount: activeCampaignsCount || 0,
+    totalCampaignSubscriptions: totalCampaignSubscriptions || 0,
+    activeCampaigns,
     registrationsByCounty,
     registrationsByCity,
     recentImports: (recentImportsData || []) as DashboardMetrics['recentImports'],
