@@ -187,9 +187,11 @@ export function RegistrationsTable({
           if (num === undefined || num === null) return <span className="text-slate-400 text-xs">-</span>;
           const formatted = String(num).padStart(3, '0');
           return (
-            <Badge variant="outline" className="text-xs font-mono font-bold bg-indigo-50/50 dark:bg-indigo-950/40 border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300 px-2 py-0.5">
-              #{formatted}
-            </Badge>
+            <Link href={`/registrations/${info.row.original.id}`}>
+              <Badge variant="outline" className="text-xs font-mono font-bold bg-indigo-50/50 dark:bg-indigo-950/40 border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 transition-colors px-2 py-0.5 cursor-pointer">
+                #{formatted}
+              </Badge>
+            </Link>
           );
         },
       }),
@@ -205,7 +207,14 @@ export function RegistrationsTable({
       columnHelper.accessor((row) => `${row.parent_last_name} ${row.parent_first_name}`, {
         id: 'parent_name',
         header: () => renderSortableHeader('Părinte / Titular', 'parent_last_name'),
-        cell: (info) => <span className="font-semibold text-xs">{info.getValue()}</span>,
+        cell: (info) => (
+          <Link
+            href={`/registrations/${info.row.original.id}`}
+            className="font-semibold text-xs text-slate-900 dark:text-slate-100 hover:text-indigo-600 dark:hover:text-indigo-400 hover:underline transition-colors"
+          >
+            {info.getValue()}
+          </Link>
+        ),
       }),
       columnHelper.accessor('primary_email', {
         header: 'Email',

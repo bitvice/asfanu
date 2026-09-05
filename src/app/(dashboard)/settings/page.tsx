@@ -8,9 +8,11 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { testSmtpConnectionAction } from '@/features/email/actions';
 import { Input } from '@/components/ui/input';
-import { Settings, ShieldAlert, Eye, Download, UserCog, RefreshCw, Key, ShieldCheck, Mail, Send, CheckCircle2, AlertCircle, Loader2 } from 'lucide-react';
+import { useToast } from '@/components/ui/toast';
+import { Settings, ShieldAlert, Eye, Download, UserCog, RefreshCw, Key, ShieldCheck, Mail, Send, Loader2 } from 'lucide-react';
 
 export default function SettingsPage() {
+  const { toast } = useToast();
   const [logs, setLogs] = React.useState<AuditLogItem[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
@@ -18,7 +20,6 @@ export default function SettingsPage() {
   // SMTP Test state
   const [testEmailInput, setTestEmailInput] = React.useState('gabi@bitvice.ro');
   const [testingSmtp, setTestingSmtp] = React.useState(false);
-  const [smtpTestResult, setSmtpTestResult] = React.useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   const loadAuditLogs = React.useCallback(async () => {
     setLoading(true);
@@ -41,17 +42,16 @@ export default function SettingsPage() {
     e.preventDefault();
     if (!testEmailInput || !testEmailInput.trim()) return;
     setTestingSmtp(true);
-    setSmtpTestResult(null);
 
     const res = await testSmtpConnectionAction(testEmailInput.trim());
 
     if (res.error) {
-      setSmtpTestResult({ type: 'error', text: res.error });
+      toast.error(res.error, 'Eroare Conexiune SMTP');
     } else {
-      setSmtpTestResult({
-        type: 'success',
-        text: res.data?.message || `Emailul de test a fost trimis cu succes către ${testEmailInput}!`,
-      });
+      toast.success(
+        res.data?.message || `Emailul de test a fost trimis cu succes către ${testEmailInput}!`,
+        'Conexiune SMTP Reușită'
+      );
     }
     setTestingSmtp(false);
   }
@@ -164,23 +164,6 @@ export default function SettingsPage() {
               </Button>
             </div>
           </form>
-
-          {smtpTestResult && (
-            <div
-              className={`p-3 rounded-lg border text-xs font-medium flex items-center gap-2 ${
-                smtpTestResult.type === 'success'
-                  ? 'bg-emerald-50 dark:bg-emerald-950/50 text-emerald-800 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800'
-                  : 'bg-red-50 dark:bg-red-950/50 text-red-800 dark:text-red-300 border-red-200 dark:border-red-800'
-              }`}
-            >
-              {smtpTestResult.type === 'success' ? (
-                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-              ) : (
-                <AlertCircle className="w-4 h-4 text-red-600 shrink-0" />
-              )}
-              <span>{smtpTestResult.text}</span>
-            </div>
-          )}
         </CardContent>
       </Card>
 

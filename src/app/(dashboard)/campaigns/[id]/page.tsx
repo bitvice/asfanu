@@ -49,6 +49,7 @@ import {
 import Link from 'next/link';
 import { generateCardPdfBase64 } from '@/components/campaigns/CampaignCardExporter';
 import { sendVoucherEmailAction } from '@/features/email/actions';
+import { useToast } from '@/components/ui/toast';
 
 const statusLabels: Record<string, { label: string; variant: 'success' | 'secondary' | 'destructive' }> = {
   active: { label: 'Activă', variant: 'success' },
@@ -58,16 +59,19 @@ const statusLabels: Record<string, { label: string; variant: 'success' | 'second
 
 interface SubscriptionWithFamily {
   id: string;
+  campaign_id: string;
+  registration_id: string;
+  coupon_number: number | null;
   coupon_code: string;
-  coupon_number: number;
   subscribed_at: string;
+  subscribed_by: string;
   email_sent_at?: string | null;
   email_sent_to?: string | null;
   registrations: {
     id: string;
     parent_first_name: string;
     parent_last_name: string;
-    primary_email: string;
+    primary_email: string | null;
     phone: string;
     county: string;
     city: string;
@@ -75,6 +79,7 @@ interface SubscriptionWithFamily {
 }
 
 export default function CampaignDetailPage() {
+  const { toast } = useToast();
   const [campaign, setCampaign] = React.useState<CampaignWithStats | null>(null);
   const [subscriptions, setSubscriptions] = React.useState<SubscriptionWithFamily[]>([]);
   const [loading, setLoading] = React.useState(true);
@@ -172,22 +177,21 @@ export default function CampaignDetailPage() {
         });
 
         if (res.error) {
-          setEmailBannerMessage({ type: 'error', text: res.error });
+          toast.error(res.error, 'Eroare Trimitere Email');
         } else {
-          setEmailBannerMessage({
-            type: 'success',
-            text: `Voucherul a fost trimis cu succes pe email către ${sub.registrations.primary_email}!`,
-          });
-          setTimeout(() => setEmailBannerMessage(null), 5000);
+          toast.success(
+            `Voucherul a fost trimis cu succes pe email către ${sub.registrations.primary_email}!`,
+            'Voucher Expediat'
+          );
           await loadDetail();
         }
       } catch (err: unknown) {
-        setEmailBannerMessage({ type: 'error', text: (err as Error).message || 'Eroare la trimiterea emailului.' });
+        toast.error((err as Error).message || 'Eroare la trimiterea emailului.', 'Eroare Trimitere Email');
       } finally {
         setSendingEmailSubId(null);
       }
     },
-    [loadDetail]
+    [loadDetail, toast]
   );
 
   const handleTableSendEmailClick = React.useCallback((sub: SubscriptionWithFamily) => {
@@ -566,8 +570,8 @@ export default function CampaignDetailPage() {
           if (!open) setSelectedSubForVoucher(null);
         }}
       >
-        <DialogContent className="max-w-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 p-6">
-          <DialogHeader className="pb-3 border-b border-slate-100 dark:border-slate-800">
+        <DialogContent className="max-w-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 p-5">
+          <DialogHeader className="pb-2 border-b border-slate-100 dark:border-slate-800">
             <DialogTitle className="text-base font-extrabold flex items-center justify-between gap-2">
               <span className="text-slate-900 dark:text-slate-100">
                 Voucher — {selectedSubForVoucher ? formatVoucherName(selectedSubForVoucher.registrations.parent_last_name, selectedSubForVoucher.registrations.parent_first_name) : ''}
@@ -579,9 +583,9 @@ export default function CampaignDetailPage() {
           </DialogHeader>
 
           {selectedSubForVoucher && (
-            <div className="py-3 space-y-4 flex flex-col items-center">
+            <div className="py-2 space-y-3 flex flex-col items-center">
               {/* Voucher Card Container */}
-              <div className="p-3 rounded-2xl bg-slate-100/80 dark:bg-slate-900/80 border border-slate-200/80 dark:border-slate-800/80 flex items-center justify-center w-full overflow-x-auto">
+              <div className="p-2.5 rounded-2xl bg-slate-100/80 dark:bg-slate-900/80 border border-slate-200/80 dark:border-slate-800/80 flex items-center justify-center w-full overflow-x-auto">
                 <CampaignCardPreview
                   cardRef={voucherCardRef}
                   campaignName={campaign.name}
@@ -592,12 +596,12 @@ export default function CampaignDetailPage() {
                     selectedSubForVoucher.registrations.parent_first_name
                   )}
                   templateConfig={templateConfig}
-                  scale={1.35}
+                  scale={1.05}
                 />
               </div>
 
-              <div className="flex flex-wrap items-center justify-between w-full pt-2 gap-2">
-                <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center justify-between w-full pt-1 gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   <CampaignCardExporter
                     cardRef={voucherCardRef}
                     fileName={`voucher-${selectedSubForVoucher.coupon_code}`}
@@ -608,7 +612,7 @@ export default function CampaignDetailPage() {
                     size="sm"
                     disabled={!selectedSubForVoucher.registrations.primary_email || sendingEmailSubId === selectedSubForVoucher.id}
                     onClick={() => triggerSendEmailForSub(selectedSubForVoucher, voucherCardRef)}
-                    className="text-xs gap-1.5 font-semibold text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 disabled:opacity-50"
+                    className="text-xs gap-1.5 font-semibold text-indigo-700 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 disabled:opacity-50 h-9"
                     title={!selectedSubForVoucher.registrations.primary_email ? 'Familia nu are o adresă de email definită' : `Trimite pe email la ${selectedSubForVoucher.registrations.primary_email}`}
                   >
                     {sendingEmailSubId === selectedSubForVoucher.id ? (
@@ -619,12 +623,6 @@ export default function CampaignDetailPage() {
                     <span>{sendingEmailSubId === selectedSubForVoucher.id ? 'Se trimite...' : 'Trimite pe Email'}</span>
                   </Button>
                 </div>
-
-                <DialogClose asChild>
-                  <Button variant="outline" size="sm" className="text-xs">
-                    Închide
-                  </Button>
-                </DialogClose>
               </div>
             </div>
           )}

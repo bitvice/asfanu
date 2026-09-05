@@ -82,8 +82,10 @@ export async function GET(request: NextRequest) {
 
     if (sortBy === 'parent_last_name') {
       query = query.order('parent_last_name', { ascending: sortAsc });
-    } else {
+    } else if (sortBy === 'registered_at') {
       query = query.order('registered_at', { ascending: sortAsc });
+    } else {
+      query = query.order('family_number', { ascending: sortAsc });
     }
 
     if (search) {

@@ -96,8 +96,10 @@ export async function getRegistrations(filters: RegistrationFilters = {}, userRo
 
   if (sortColumn === 'parent_last_name') {
     query = query.order('parent_last_name', { ascending: sortAsc });
-  } else if (sortColumn === 'family_number' || sortColumn === 'registered_at' || !filters.sortBy) {
+  } else if (sortColumn === 'registered_at') {
     query = query.order('registered_at', { ascending: sortAsc });
+  } else {
+    query = query.order('family_number', { ascending: sortAsc });
   }
 
   // Fetch full set if filtering by family number or sorting by children count, otherwise fetch paginated range

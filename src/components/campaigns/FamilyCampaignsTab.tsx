@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import Link from 'next/link';
 import {
   fetchCampaignsForRegistrationAction,
   unsubscribeFamilyAction,
@@ -21,7 +22,6 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
-  DialogClose,
 } from '@/components/ui/dialog';
 import {
   Megaphone,
@@ -39,9 +39,8 @@ import {
   Trash2,
   Eye,
   Send,
-  AlertCircle,
 } from 'lucide-react';
-import Link from 'next/link';
+import { useToast } from '@/components/ui/toast';
 
 interface FamilyCampaignsTabProps {
   registrationId: string;
@@ -107,6 +106,7 @@ function CampaignVoucherThumbnail({
 }
 
 export function FamilyCampaignsTab({ registrationId, familyName }: FamilyCampaignsTabProps) {
+  const { toast } = useToast();
   const [campaigns, setCampaigns] = React.useState<CampaignForRegistration[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [copiedCode, setCopiedCode] = React.useState<string | null>(null);
@@ -120,7 +120,6 @@ export function FamilyCampaignsTab({ registrationId, familyName }: FamilyCampaig
   const [voucherModalCampaign, setVoucherModalCampaign] = React.useState<CampaignForRegistration | null>(null);
   const modalCardRef = React.useRef<HTMLDivElement>(null);
   const [sendingModalEmail, setSendingModalEmail] = React.useState(false);
-  const [modalEmailResult, setModalEmailResult] = React.useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   const loadCampaigns = React.useCallback(async () => {
     setLoading(true);
@@ -141,7 +140,6 @@ export function FamilyCampaignsTab({ registrationId, familyName }: FamilyCampaig
   async function handleModalSendEmail() {
     if (!voucherModalCampaign?.subscription_id || !modalCardRef.current) return;
     setSendingModalEmail(true);
-    setModalEmailResult(null);
     try {
       const pdfBase64 = await generateCardPdfBase64(modalCardRef.current);
       const res = await sendVoucherEmailAction({
@@ -150,18 +148,15 @@ export function FamilyCampaignsTab({ registrationId, familyName }: FamilyCampaig
       });
 
       if (res.error) {
-        setModalEmailResult({ type: 'error', text: res.error });
+        toast.error(res.error, 'Eroare Trimitere Email');
       } else {
-        setModalEmailResult({
-          type: 'success',
-          text: res.data?.message || 'Voucherul a fost trimis cu succes pe email!',
-        });
+        toast.success(
+          `Voucherul a fost trimis cu succes pe email către ${res.data?.sentTo || familyName}!`,
+          'Voucher Expediat'
+        );
       }
     } catch (err: unknown) {
-      setModalEmailResult({
-        type: 'error',
-        text: (err as Error).message || 'Eroare la trimiterea emailului.',
-      });
+      toast.error((err as Error).message || 'Eroare la trimiterea emailului.', 'Eroare Trimitere Email');
     } finally {
       setSendingModalEmail(false);
     }
@@ -481,12 +476,11 @@ export function FamilyCampaignsTab({ registrationId, familyName }: FamilyCampaig
         onOpenChange={(open) => {
           if (!open) {
             setVoucherModalCampaign(null);
-            setModalEmailResult(null);
           }
         }}
       >
-        <DialogContent className="max-w-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 p-6">
-          <DialogHeader className="pb-3 border-b border-slate-100 dark:border-slate-800">
+        <DialogContent className="max-w-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 p-5">
+          <DialogHeader className="pb-2 border-b border-slate-100 dark:border-slate-800">
             <DialogTitle className="text-base font-extrabold flex items-center justify-between gap-2">
               <span className="text-slate-900 dark:text-slate-100">
                 Voucher — {familyName}
@@ -498,9 +492,9 @@ export function FamilyCampaignsTab({ registrationId, familyName }: FamilyCampaig
           </DialogHeader>
 
           {voucherModalCampaign && (
-            <div className="py-3 space-y-4 flex flex-col items-center">
+            <div className="py-2 space-y-3 flex flex-col items-center">
               {/* Voucher Card Container */}
-              <div className="p-3 rounded-2xl bg-slate-100/80 dark:bg-slate-900/80 border border-slate-200/80 dark:border-slate-800/80 flex items-center justify-center w-full overflow-x-auto">
+              <div className="p-2.5 rounded-2xl bg-slate-100/80 dark:bg-slate-900/80 border border-slate-200/80 dark:border-slate-800/80 flex items-center justify-center w-full overflow-x-auto">
                 <CampaignCardPreview
                   cardRef={modalCardRef}
                   campaignName={voucherModalCampaign.name}
@@ -508,56 +502,31 @@ export function FamilyCampaignsTab({ registrationId, familyName }: FamilyCampaig
                   couponCode={voucherModalCampaign.coupon_code || ''}
                   familyName={familyName}
                   templateConfig={(voucherModalCampaign.card_template_config as unknown as CardTemplateConfig) || {}}
-                  scale={1.35}
+                  scale={1.05}
                 />
               </div>
 
-              {modalEmailResult && (
-                <div
-                  className={`p-3 rounded-lg border text-xs font-medium flex items-center gap-2 w-full ${
-                    modalEmailResult.type === 'success'
-                      ? 'bg-emerald-50 dark:bg-emerald-950/50 text-emerald-800 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800'
-                      : 'bg-red-50 dark:bg-red-950/50 text-red-800 dark:text-red-300 border-red-200 dark:border-red-800'
-                  }`}
-                >
-                  {modalEmailResult.type === 'success' ? (
-                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                  ) : (
-                    <AlertCircle className="w-4 h-4 text-red-600 shrink-0" />
-                  )}
-                  <span>{modalEmailResult.text}</span>
-                </div>
-              )}
-
-              <div className="flex flex-wrap items-center justify-between w-full pt-2 gap-2">
+              <div className="flex flex-wrap items-center justify-between w-full pt-1 gap-2">
                 <CampaignCardExporter
                   cardRef={modalCardRef}
                   fileName={`voucher-${voucherModalCampaign.coupon_code || 'asfanu'}`}
                 />
 
-                <div className="flex items-center gap-2">
-                  {voucherModalCampaign.subscription_id && (
-                    <Button
-                      size="sm"
-                      disabled={sendingModalEmail}
-                      onClick={handleModalSendEmail}
-                      className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold gap-1.5 h-9"
-                    >
-                      {sendingModalEmail ? (
-                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                      ) : (
-                        <Send className="w-3.5 h-3.5" />
-                      )}
-                      <span>{sendingModalEmail ? 'Se trimite...' : 'Trimite pe Email'}</span>
-                    </Button>
-                  )}
-
-                  <DialogClose asChild>
-                    <Button variant="outline" size="sm" className="text-xs h-9">
-                      Închide
-                    </Button>
-                  </DialogClose>
-                </div>
+                {voucherModalCampaign.subscription_id && (
+                  <Button
+                    size="sm"
+                    disabled={sendingModalEmail}
+                    onClick={handleModalSendEmail}
+                    className="bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold gap-1.5 h-9 px-4 shadow-sm"
+                  >
+                    {sendingModalEmail ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <Send className="w-3.5 h-3.5" />
+                    )}
+                    <span>{sendingModalEmail ? 'Se trimite...' : 'Trimite pe Email'}</span>
+                  </Button>
+                )}
               </div>
             </div>
           )}
